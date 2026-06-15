@@ -1,0 +1,6 @@
+{
+  "name": "Church Master Pro",
+  "description": "A fully offline, PWA-ready church management system with a midnight professional design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
