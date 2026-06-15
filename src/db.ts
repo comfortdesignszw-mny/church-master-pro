@@ -19,6 +19,7 @@ export interface ChurchEvent {
   endDate?: string;
   time: string;
   expectedContribution: number;
+  reminderSet?: boolean;
 }
 
 export interface Transaction {

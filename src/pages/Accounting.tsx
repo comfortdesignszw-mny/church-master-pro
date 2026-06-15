@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useSearchParams } from "react-router-dom";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const DEFAULT_INCOME_CATEGORIES = [
   "Charity Contributions",
@@ -195,6 +196,23 @@ export function Accounting() {
     }
   };
 
+  // Monthly Data Calculation
+  const monthlyDataMap = transactions.reduce((acc, t) => {
+    if (t.type !== 'income') return acc;
+    const month = format(new Date(t.date), 'MMM yyyy');
+    if (!acc[month]) {
+      acc[month] = { month, sundayCollections: 0, otherOfferings: 0, sortKey: t.date.substring(0, 7) };
+    }
+    if (t.category === 'Sunday Collections') {
+      acc[month].sundayCollections += t.amount;
+    } else {
+      acc[month].otherOfferings += t.amount;
+    }
+    return acc;
+  }, {} as Record<string, { month: string, sundayCollections: number, otherOfferings: number, sortKey: string }>);
+
+  const chartData = Object.values(monthlyDataMap).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
   return (
     <div className="space-y-4 md:space-y-8 pb-12">
       <div className="flex sm:items-center justify-between flex-col sm:flex-row gap-4">
@@ -268,6 +286,28 @@ export function Accounting() {
              Total Outflow
           </p>
           <p className="mt-2 text-3xl font-black font-display text-rose-400 truncate">${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+        </div>
+      </div>
+
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl">
+        <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4">Monthly Collections & Offerings</h3>
+        <div className="h-[250px] md:h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="month" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
+              <Tooltip 
+                cursor={{ fill: '#1e293b', opacity: 0.4 }}
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc', borderRadius: '8px' }}
+                itemStyle={{ color: '#f8fafc' }}
+                formatter={(value: number) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, undefined]}
+              />
+              <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+              <Bar dataKey="sundayCollections" name="Sunday Collections" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="otherOfferings" name="Other Offerings" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

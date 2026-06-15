@@ -142,6 +142,23 @@ export function BibleStudy() {
             });
           }
         });
+      } else if (rawData && typeof rawData === 'object' && rawData.resultset && rawData.resultset.row) {
+        // Handle bibleapi-bibles-json structure
+        const booksList = ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi", "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"];
+        
+        rawData.resultset.row.forEach((row: any) => {
+           const field = row.field;
+           const bookIdx = parseInt(field[1]) - 1;
+           const bookName = booksList[bookIdx];
+           const chapter = String(field[2]);
+           const verseNum = parseInt(field[3]);
+           const text = field[4];
+           if (bookName) {
+              if (!parsedBooks[bookName]) parsedBooks[bookName] = {};
+              if (!parsedBooks[bookName][chapter]) parsedBooks[bookName][chapter] = [];
+              parsedBooks[bookName][chapter][verseNum - 1] = text;
+           }
+        });
       } else if (rawData && typeof rawData === 'object') {
         const potentialBooks = rawData.books || rawData;
         if (Array.isArray(potentialBooks)) {
@@ -507,19 +524,19 @@ export function BibleStudy() {
   // Preset Bible databases URLs for downloading
   const biblePresetCDNs = [
     {
-      abbr: "WEB",
-      name: "World English Bible (Complete Modern English Translation)",
-      url: "https://raw.githubusercontent.com/gscid/bible-dataset/master/web.json"
+      abbr: "ASV",
+      name: "American Standard Version (1901)",
+      url: "https://raw.githubusercontent.com/bibleapi/bibleapi-bibles-json/master/asv.json"
     },
     {
       abbr: "KJV",
       name: "King James Version (Traditional Authorized Version)",
-      url: "https://raw.githubusercontent.com/gscid/bible-dataset/master/kjv.json"
+      url: "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json"
     },
     {
       abbr: "BBE",
       name: "Bible in Basic English (Accessible Simplistic Reading)",
-      url: "https://raw.githubusercontent.com/gscid/bible-dataset/master/bbe.json"
+      url: "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_bbe.json"
     }
   ];
 
