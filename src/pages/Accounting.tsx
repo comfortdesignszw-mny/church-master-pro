@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Transaction } from "@/db";
-import { ArrowDownRight, ArrowUpRight, Plus, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Plus, Wallet, Download, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { useSearchParams } from "react-router-dom";
 
 const DEFAULT_INCOME_CATEGORIES = [
   "Charity Contributions",
@@ -19,9 +22,11 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 ];
 
 export function Accounting() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const transactions = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray()) || [];
   const events = useLiveQuery(() => db.events.toArray()) || [];
   const members = useLiveQuery(() => db.members.toArray()) || [];
+  const churchSettings = useLiveQuery(() => db.settings_church.toCollection().last());
 
   const incomeCategories = [
     ...DEFAULT_INCOME_CATEGORIES,
@@ -46,6 +51,13 @@ export function Accounting() {
   const [memberOption, setMemberOption] = useState<string>("anonymous");
   const [newMemberName, setNewMemberName] = useState<string>("");
 
+  useEffect(() => {
+    if (searchParams.get('add') === 'true') {
+      setShowAddForm(true);
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
+
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const treasuryBalance = totalIncome - totalExpense;
@@ -59,6 +71,74 @@ export function Accounting() {
     }));
     setMemberOption("anonymous");
     setNewMemberName("");
+  };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    let textStartX = 14;
+    
+    if (churchSettings && churchSettings.logo) {
+      try {
+        doc.addImage(churchSettings.logo, 'JPEG', 14, 12, 18, 18);
+        textStartX = 36;
+      } catch (err) {
+        console.error("Error inserting logo into PDF:", err);
+      }
+    }
+    
+    if (churchSettings) {
+      doc.setFontSize(18);
+      doc.text(churchSettings.name.toUpperCase(), textStartX, 20);
+      doc.setFontSize(10);
+      doc.text(`${churchSettings.branch || 'Main Branch'} • ${churchSettings.district || 'District'}`, textStartX, 28);
+    } else {
+      doc.setFontSize(18);
+      doc.text("Financial Ledger", 14, 20);
+    }
+    
+    doc.setFontSize(14);
+    doc.text("Treasury Flow Statement", 14, 45);
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['Date', 'Type', 'Category', 'Contributor', 'Notes', 'Amount']],
+      body: transactions.map(t => [
+        format(new Date(t.date), 'yyyy-MM-dd'),
+        t.type,
+        t.category,
+        t.memberId === -1 ? 'Collective Church Contribution' : (t.memberId ? (members.find(m => m.id === t.memberId)?.fullName || 'Unknown Member') : (t.type === 'income' ? 'Anonymous Guest' : '—')),
+        t.notes || '—',
+        `$${t.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42] },
+      styles: { fontSize: 8 }
+    });
+
+    doc.save('Accounting_Ledger.pdf');
+  };
+
+  const generateCSV = () => {
+    let csvContent = "Date,Type,Category,Contributor,Notes,Amount\n";
+    transactions.forEach(t => {
+      const memName = t.memberId === -1 ? 'Collective Church Contribution' : (t.memberId ? (members.find(m => m.id === t.memberId)?.fullName || 'Unknown Member') : (t.type === 'income' ? 'Anonymous Guest' : '—'));
+      const row = [
+        `"${format(new Date(t.date), 'yyyy-MM-dd')}"`,
+        `"${t.type}"`,
+        `"${t.category}"`,
+        `"${memName.replace(/"/g, '""')}"`,
+        `"${(t.notes || '').replace(/"/g, '""')}"`,
+        `"${t.amount}"`
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Accounting_Ledger.csv";
+    link.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,6 +161,8 @@ export function Accounting() {
             address: ""
           });
           finalMemberId = addedId;
+        } else if (memberOption === 'collective') {
+          finalMemberId = -1;
         } else if (memberOption !== 'anonymous') {
           finalMemberId = Number(memberOption);
         }
@@ -114,72 +196,105 @@ export function Accounting() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8 pb-12">
       <div className="flex sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div>
-          <h2 className="text-2xl font-display font-bold text-slate-100">Accounting & Treasury</h2>
-          <p className="mt-1 text-sm text-slate-400">Manage church funds, incoming offerings, and expenses.</p>
+          <h2 className="text-xl md:text-2xl font-display font-bold text-slate-100">Accounting & Treasury</h2>
+          <p className="mt-1 text-xs md:text-sm text-slate-400">Manage church funds, incoming offerings, and expenses.</p>
         </div>
-        <div>
+        <div className="flex flex-wrap gap-2 md:gap-2.5">
+          <button 
+            disabled={transactions.length === 0}
+            onClick={generatePDF}
+            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-400 shrink-0" />
+            <span className="truncate">Export PDF</span>
+          </button>
+          <button 
+            disabled={transactions.length === 0}
+            onClick={generateCSV}
+            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center disabled:opacity-50"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-400 shrink-0" />
+            <span className="truncate">Export CSV</span>
+          </button>
           <button 
             onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-4 py-2 rounded-md font-medium text-sm transition"
+            className="w-full sm:w-auto inline-flex justify-center items-center gap-1.5 md:gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-xs md:text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)] col-span-2 mt-2 sm:mt-0"
           >
-            <Plus className="w-4 h-4" />
-            New Transaction
+            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
+            <span>{showAddForm ? 'Close Form' : 'New Transaction'}</span>
           </button>
         </div>
       </div>
 
       {/* Financial Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 relative overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 relative overflow-hidden shadow-lg">
           <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Wallet className="w-24 h-24" />
+            <Wallet className="w-16 h-16 md:w-24 md:h-24" />
           </div>
-          <p className="text-sm font-medium text-slate-400">Total Treasury Balance</p>
-          <p className="mt-2 text-3xl font-bold font-display text-slate-100">${treasuryBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="text-[10px] md:text-sm font-bold tracking-widest uppercase text-slate-400">Total Treasury</p>
+          <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-slate-100 truncate">${treasuryBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
         </div>
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6">
-          <p className="flex items-center gap-2 text-sm font-medium text-slate-400">
-             <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 shadow-lg">
+            <p className="flex items-center gap-1 text-[9px] font-bold tracking-widest uppercase text-slate-400">
+               <ArrowUpRight className="w-3 h-3 text-emerald-400 shrink-0" />
+               Inflow
+            </p>
+            <p className="mt-1 text-xl font-black font-display text-emerald-400 truncate">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 1})}</p>
+          </div>
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 shadow-lg">
+            <p className="flex items-center gap-1 text-[9px] font-bold tracking-widest uppercase text-slate-400">
+               <ArrowDownRight className="w-3 h-3 text-rose-400 shrink-0" />
+               Outflow
+            </p>
+            <p className="mt-1 text-xl font-black font-display text-rose-400 truncate">${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 1})}</p>
+          </div>
+        </div>
+        
+        <div className="hidden md:block bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-lg">
+          <p className="flex items-center gap-2 text-sm font-bold tracking-widest uppercase text-slate-400">
+             <ArrowUpRight className="w-4 h-4 text-emerald-400 shrink-0" />
              Total Inflow
           </p>
-          <p className="mt-2 text-3xl font-bold font-display text-emerald-400">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="mt-2 text-3xl font-black font-display text-emerald-400 truncate">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
         </div>
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6">
-          <p className="flex items-center gap-2 text-sm font-medium text-slate-400">
-             <ArrowDownRight className="w-4 h-4 text-rose-400" />
+        <div className="hidden md:block bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-lg">
+          <p className="flex items-center gap-2 text-sm font-bold tracking-widest uppercase text-slate-400">
+             <ArrowDownRight className="w-4 h-4 text-rose-400 shrink-0" />
              Total Outflow
           </p>
-          <p className="mt-2 text-3xl font-bold font-display text-rose-400">${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="mt-2 text-3xl font-black font-display text-rose-400 truncate">${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
         </div>
       </div>
 
       {showAddForm && (
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-4">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-4 shadow-xl">
           <div className="flex border-b border-midnight-800">
             <button
               onClick={() => handleTabChange('income')}
-              className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'income' ? 'bg-midnight-800 text-emerald-400 border-b-2 border-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`flex-1 py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'income' ? 'bg-midnight-800 text-emerald-400 border-b-2 border-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
             >
               Record Income
             </button>
             <button
               onClick={() => handleTabChange('expense')}
-              className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'expense' ? 'bg-midnight-800 text-rose-400 border-b-2 border-rose-400' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`flex-1 py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'expense' ? 'bg-midnight-800 text-rose-400 border-b-2 border-rose-400' : 'text-slate-500 hover:text-slate-300'}`}
             >
               Record Expense
             </button>
           </div>
           
-          <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
              {activeTab === 'income' && (
-               <div className="col-span-1 md:col-span-2 p-4 bg-midnight-950/40 rounded-lg border border-midnight-800 space-y-4">
-                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">1. Contributor (Member)</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="col-span-1 md:col-span-2 p-3 md:p-4 bg-midnight-950/40 rounded-lg border border-midnight-800 space-y-3 md:space-y-4">
+                 <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">1. Contributor (Member)</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                    <div>
-                     <label className="block text-xs font-semibold text-slate-400 mb-2">Member Name *</label>
+                     <label className="block text-[10px] md:text-xs font-semibold text-slate-400 mb-1.5 md:mb-2">Member Name *</label>
                      <select 
                        value={memberOption} 
                        onChange={e => {
@@ -188,9 +303,10 @@ export function Accounting() {
                            setNewMemberName("");
                          }
                        }} 
-                       className="w-full bg-midnight-900 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
+                       className="w-full bg-midnight-900 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm"
                      >
                        <option value="anonymous">Visitor / Guest / General (Anonymous)</option>
+                       <option value="collective">Collective Church Contribution</option>
                        {members.map(m => (
                          <option key={m.id} value={String(m.id)}>{m.fullName} ({m.position || 'Member'})</option>
                        ))}
@@ -199,14 +315,14 @@ export function Accounting() {
                    </div>
                    {memberOption === 'new' && (
                      <div className="animate-in fade-in duration-200">
-                       <label className="block text-xs font-semibold text-slate-400 mb-2">New Member Full Name *</label>
+                       <label className="block text-[10px] md:text-xs font-semibold text-slate-400 mb-1.5 md:mb-2">New Member Full Name *</label>
                        <input 
                          required 
                          type="text" 
                          value={newMemberName} 
                          onChange={e => setNewMemberName(e.target.value)} 
                          placeholder="First Name & Last Name" 
-                         className="w-full bg-midnight-900 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm" 
+                         className="w-full bg-midnight-900 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" 
                        />
                      </div>
                    )}
@@ -215,37 +331,37 @@ export function Accounting() {
              )}
 
              <div className={activeTab === 'income' ? 'col-span-1 md:col-span-2 pt-2' : 'hidden'}>
-               {activeTab === 'income' && <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">2. Transaction Details</h4>}
+               {activeTab === 'income' && <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 md:mb-2">2. Transaction Details</h4>}
              </div>
 
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Category *</label>
-                <select required value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500">
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-1.5 md:mb-2">Category *</label>
+                <select required value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm">
                    {(activeTab === 'income' ? incomeCategories : expenseCategories).map(cat => (
                      <option key={cat} value={cat}>{cat}</option>
                    ))}
                 </select>
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Amount *</label>
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-1.5 md:mb-2">Amount *</label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <span className="text-slate-500 sm:text-sm">$</span>
+                    <span className="text-slate-500 text-xs md:text-sm">$</span>
                   </div>
-                  <input required type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: Number(e.target.value)})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md py-2 pl-7 pr-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                  <input required type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: Number(e.target.value)})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md py-2 pl-7 pr-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
                 </div>
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Date *</label>
-                <input required type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-1.5 md:mb-2">Date *</label>
+                <input required type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Notes</label>
-                <input type="text" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" placeholder="Optional notes..." />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-1.5 md:mb-2">Notes</label>
+                <input type="text" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="Optional notes..." />
              </div>
              <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-midnight-800">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100 transition">Cancel</button>
-                <button type="submit" className={`font-medium px-4 py-2 rounded-md text-sm transition ${activeTab === 'income' ? 'bg-emerald-500 hover:bg-emerald-600 text-midnight-950' : 'bg-rose-500 hover:bg-rose-600 text-slate-100'}`}>
+                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-slate-100 transition">Cancel</button>
+                <button type="submit" className={`font-bold px-4 py-2 md:px-5 rounded-md text-xs md:text-sm transition shadow-lg ${activeTab === 'income' ? 'bg-emerald-500 hover:bg-emerald-600 text-midnight-950 shadow-emerald-500/20' : 'bg-rose-500 hover:bg-rose-600 text-slate-100 shadow-rose-500/20'}`}>
                   Save {activeTab === 'income' ? 'Income' : 'Expense'}
                 </button>
              </div>
@@ -254,13 +370,13 @@ export function Accounting() {
       )}
 
       {/* Transaction History */}
-      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-sm">
-        <div className="px-6 py-5 border-b border-midnight-800">
-          <h3 className="text-lg font-medium text-slate-200">Transaction History</h3>
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800">
+          <h3 className="text-base md:text-lg font-bold text-slate-200">Transaction History</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-midnight-950 text-slate-400 font-medium">
+          <table className="w-full text-left text-xs md:text-sm whitespace-nowrap">
+            <thead className="bg-midnight-950 text-slate-400 font-semibold text-[9px] md:text-[10px] uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 border-b border-midnight-800">Date</th>
                 <th className="px-6 py-4 border-b border-midnight-800">Type</th>
@@ -296,6 +412,8 @@ export function Accounting() {
                       <td className="px-6 py-4">
                         {matchedMember ? (
                           <span className="text-white font-medium">{matchedMember.fullName}</span>
+                        ) : t.memberId === -1 ? (
+                          <span className="text-gold-400 font-medium">Collective Church Contribution</span>
                         ) : t.type === 'income' ? (
                           <span className="text-slate-500 italic">Anonymous Guest</span>
                         ) : (

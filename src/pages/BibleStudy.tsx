@@ -576,13 +576,13 @@ export function BibleStudy() {
       )}
 
       {/* Main Study Arena Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6 items-stretch">
         
         {/* Left Hand Sidebar Column: Recent Notes, Bookmarks & Available Offline translations (3 cols) */}
-        <div className="xl:col-span-3 space-y-6">
+        <div className="xl:col-span-3 space-y-4 md:space-y-6">
           
           {/* Active Version Manager Box */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-sm space-y-3 md:space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-gold-500" />
               Hydrated Translations
@@ -760,13 +760,13 @@ export function BibleStudy() {
         </div>
 
         {/* Middle and Right Columns Combined */}
-        <div className={`xl:col-span-9 grid grid-cols-1 ${showNotepad ? 'lg:grid-cols-2' : ''} gap-6`}>
+        <div className={`xl:col-span-9 grid grid-cols-1 ${showNotepad ? 'lg:grid-cols-2' : ''} gap-4 md:gap-6 lg:h-[750px]`}>
           
           {/* INTERACTIVE BIBLE READER COLUMN */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-md flex flex-col h-[750px]">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-md flex flex-col h-[500px] lg:h-full">
             
             {/* Nav Header Controls */}
-            <div className="p-4 bg-midnight-950 border-b border-midnight-800 flex flex-wrap items-center justify-between gap-4 shrink-0">
+            <div className="p-3 md:p-4 bg-midnight-950 border-b border-midnight-800 flex flex-wrap items-center justify-between gap-2 md:gap-4 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] bg-gold-950 border border-gold-500/20 text-gold-400 font-bold tracking-widest uppercase px-2.5 py-1 rounded">
                   {selectedVersionId}
@@ -949,7 +949,7 @@ export function BibleStudy() {
 
           {/* SPLIT SCREEN RICH-TEXT NOTEPAD COLUMN */}
           {showNotepad && (
-            <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-md flex flex-col h-[750px] animate-in slide-in-from-right-4 fade-in duration-200">
+            <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-md flex flex-col h-[500px] lg:h-full animate-in slide-in-from-right-4 fade-in duration-200">
               
               {/* Document/Notepad Header Title Input */}
               <div className="p-4 bg-midnight-950 border-b border-midnight-800 flex items-center justify-between gap-4 shrink-0">

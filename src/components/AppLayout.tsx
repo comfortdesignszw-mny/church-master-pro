@@ -3,11 +3,12 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
-import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download } from "lucide-react";
+import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu } from "lucide-react";
 
 export function AppLayout() {
   const settingsPersonal = useLiveQuery(() => db.settings_personal.toCollection().last());
   const settingsChurch = useLiveQuery(() => db.settings_church.toCollection().last());
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // PWA Native App Install Banner Handlers
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -158,7 +159,7 @@ export function AppLayout() {
           
           <div className="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-950 border border-gold-500/25 mb-5 overflow-hidden text-gold-500">
              <img 
-               src="/pwa-icon.jpg" 
+               src={settingsChurch?.logo || "/src/assets/images/church_master_icon_1781535615677.jpg"} 
                className="absolute inset-0 w-full h-full object-cover opacity-60"
                alt="Lock Screen Logo"
                referrerPolicy="no-referrer"
@@ -241,43 +242,50 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen bg-midnight-950 text-slate-300 font-sans overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="h-16 border-b border-midnight-800 bg-midnight-900/50 flex items-center justify-between px-8 backdrop-blur-sm shrink-0">
-          <div className="flex items-center gap-3">
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <div className="flex flex-1 flex-col overflow-hidden w-full">
+        <header className="h-16 border-b border-midnight-800 bg-midnight-900/50 flex items-center justify-between px-4 md:px-8 backdrop-blur-sm shrink-0">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-1.5 -ml-1.5 mr-1 text-slate-400 hover:text-white md:hidden"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             {settingsChurch?.logo ? (
               <img 
                 src={settingsChurch.logo} 
                 alt="Church logo" 
-                className="w-10 h-10 object-contain rounded-md border border-midnight-700 bg-midnight-950 p-0.5 shrink-0" 
+                className="w-8 h-8 md:w-10 md:h-10 object-contain rounded-md border border-midnight-700 bg-midnight-950 p-0.5 shrink-0 hidden sm:block" 
               />
             ) : (
               <img 
-                src="/pwa-icon.jpg" 
+                src={settingsChurch?.logo || "/src/assets/images/church_master_icon_1781535615677.jpg"} 
                 alt="Church logo" 
-                className="w-10 h-10 object-cover rounded-md border border-gold-500/25 shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.2)]"
+                className="w-8 h-8 md:w-10 md:h-10 object-cover rounded-md border border-gold-500/25 shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.2)] hidden sm:block"
+                referrerPolicy="no-referrer"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
             )}
             <div className="flex flex-col">
-              <h2 className="text-white font-bold text-lg leading-tight">{settingsChurch?.name || "Apostolic Faith Church"}</h2>
-              <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">
-                {settingsChurch?.district ? `${settingsChurch.district} • ${settingsChurch.province || ''} • ${settingsChurch.branch || ''}` : "District 12 • South Province • Metropolitan Branch"}
+              <h2 className="text-white font-bold text-base md:text-lg leading-tight truncate max-w-[120px] sm:max-w-xs">{settingsChurch?.name || "Apostolic Faith Church"}</h2>
+              <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-semibold tracking-wider truncate max-w-[120px] sm:max-w-xs">
+                {settingsChurch?.district ? `${settingsChurch.district} • ${settingsChurch.province || ''} • ${settingsChurch.branch || ''}` : "District 12 • South Province"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 md:gap-6">
             {/* Custom browser PWA install buttons */}
             {isInstallable && deferredPrompt && (
               <button
                 onClick={handleInstallClick}
-                className="p-2 bg-gradient-to-r from-gold-500 to-gold-600 text-midnight-950 hover:from-gold-400 hover:to-gold-500 rounded flex items-center gap-1.5 transition text-xs font-bold shadow-[0_0_15px_rgba(251,191,36,0.25)] scale-100 hover:scale-102 active:scale-98"
+                className="p-1.5 md:p-2 bg-gradient-to-r from-gold-500 to-gold-600 text-midnight-950 hover:from-gold-400 hover:to-gold-500 rounded flex items-center gap-1.5 transition text-[10px] md:text-xs font-bold shadow-[0_0_15px_rgba(251,191,36,0.25)] scale-100 hover:scale-102 active:scale-98"
                 title="Install Church Master Pro on your desktop or mobile home screen as a native application"
               >
                 <Download className="w-3.5 h-3.5 shrink-0" />
-                <span>Install Native App</span>
+                <span className="hidden sm:inline">Install Native App</span>
               </button>
             )}
 
@@ -285,7 +293,7 @@ export function AppLayout() {
             {getSecurityPin() && (
               <button 
                 onClick={() => setIsLocked(true)}
-                className="p-2 bg-midnight-950 text-slate-450 hover:text-gold-400 hover:bg-midnight-900 rounded border border-midnight-800 flex items-center gap-1.5 transition text-xs font-semibold"
+                className="p-1.5 md:p-2 bg-midnight-950 text-slate-450 hover:text-gold-400 hover:bg-midnight-900 rounded border border-midnight-800 flex items-center gap-1.5 transition text-[10px] md:text-xs font-semibold"
                 title="Lock Terminal Application"
               >
                 <Lock className="w-3.5 h-3.5 text-gold-500" />
@@ -293,15 +301,15 @@ export function AppLayout() {
               </button>
             )}
 
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <p className="text-[10px] text-slate-500 uppercase">Current Administrator</p>
-              <p className="text-sm font-medium text-gold-500">{settingsPersonal?.name || "Elder Samuel K. Mbeki"}</p>
+              <p className="text-xs md:text-sm font-medium text-gold-500 truncate max-w-[120px] md:max-w-[200px]">{settingsPersonal?.name || "Elder Samuel K. Mbeki"}</p>
             </div>
-            <div className="w-10 h-10 rounded-full border-2 border-midnight-800 overflow-hidden bg-midnight-800 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-midnight-800 overflow-hidden bg-midnight-800 flex items-center justify-center shrink-0">
               {settingsPersonal?.profileImage ? (
                  <img src={settingsPersonal.profileImage} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-midnight-700 to-midnight-900 flex items-center justify-center text-xs font-bold text-white uppercase">
+                <div className="w-full h-full bg-gradient-to-br from-midnight-700 to-midnight-900 flex items-center justify-center text-[10px] md:text-xs font-bold text-white uppercase">
                   {settingsPersonal?.name?.charAt(0) || "A"}
                 </div>
               )}
@@ -309,7 +317,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col justify-between">
+        <main className="flex-1 overflow-y-auto p-3 md:p-8 flex flex-col justify-between">
           <div className="mx-auto max-w-full w-full">
             <Outlet />
           </div>

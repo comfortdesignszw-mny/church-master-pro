@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Member } from "@/db";
-import { Download, Plus, FileSpreadsheet, Edit2, Trash2, Share2, CircleAlert, CheckCircle2 } from "lucide-react";
+import { Download, Plus, FileSpreadsheet, Edit2, Trash2, Share2, CircleAlert, CheckCircle2, Search } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useSearchParams } from "react-router-dom";
 
 export function Members() {
-  const members = useLiveQuery(() => db.members.toArray()) || [];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const membersData = useLiveQuery(() => db.members.toArray()) || [];
   const churchSettings = useLiveQuery(() => db.settings_church.toCollection().last());
   const events = useLiveQuery(() => db.events.toArray()) || [];
   const transactions = useLiveQuery(() => db.transactions.toArray()) || [];
@@ -14,6 +16,8 @@ export function Members() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [toast, setToast] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  
   const [form, setForm] = useState<Member>({
     fullName: "",
     position: "",
@@ -24,9 +28,28 @@ export function Members() {
     address: ""
   });
 
-  const totalMembers = members.length;
-  const totalMales = members.filter(m => m.gender === 'Male').length;
-  const totalFemales = members.filter(m => m.gender === 'Female').length;
+  useEffect(() => {
+    if (searchParams.get('add') === 'true') {
+      setShowAddForm(true);
+      // Clean up URL parameter
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Filter members dynamically
+  const members = useMemo(() => {
+    if (!searchTerm) return membersData;
+    const lower = searchTerm.toLowerCase();
+    return membersData.filter(m => 
+      m.fullName.toLowerCase().includes(lower) || 
+      (m.email && m.email.toLowerCase().includes(lower)) || 
+      (m.position && m.position.toLowerCase().includes(lower))
+    );
+  }, [membersData, searchTerm]);
+
+  const totalMembers = membersData.length;
+  const totalMales = membersData.filter(m => m.gender === 'Male').length;
+  const totalFemales = membersData.filter(m => m.gender === 'Female').length;
 
   const showToast = (message: string) => {
     setToast(message);
@@ -352,7 +375,7 @@ export function Members() {
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 md:space-y-8 pb-12">
       {/* Dynamic Toast System */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-gold-500/30 text-gold-400 px-4 py-3 rounded-lg shadow-2xl flex items-center gap-2 animate-bounce">
@@ -363,23 +386,23 @@ export function Members() {
 
       <div className="flex sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div>
-          <h2 className="text-2xl font-display font-bold text-slate-100">Church Register</h2>
-          <p className="mt-1 text-sm text-slate-400">Manage member records, credentials, and contributions.</p>
+          <h2 className="text-xl md:text-2xl font-display font-bold text-slate-100">Church Register</h2>
+          <p className="mt-1 text-xs md:text-sm text-slate-400">Manage member records, credentials, and contributions.</p>
         </div>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-2 md:gap-2.5">
           <button 
             onClick={generatePDF}
-            className="inline-flex items-center gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-4 py-2 rounded-md font-medium text-sm transition"
+            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center"
           >
-            <Download className="w-4 h-4 text-blue-400" />
-            Export PDF
+            <Download className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-400 shrink-0" />
+            <span className="truncate">Export PDF</span>
           </button>
           <button 
             onClick={generateCSV}
-            className="inline-flex items-center gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-4 py-2 rounded-md font-medium text-sm transition"
+            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-            Export CSV
+            <FileSpreadsheet className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-400 shrink-0" />
+            <span className="truncate">Export CSV</span>
           </button>
           <button 
             onClick={() => {
@@ -387,73 +410,73 @@ export function Members() {
               setForm({ fullName: "", position: "", gender: "Male", group: "Adult", phone: "", email: "", address: "" });
               setShowAddForm(!showAddForm);
             }}
-            className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-4 py-2 rounded-md font-medium text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)]"
+            className="inline-flex items-center justify-center gap-1.5 md:gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-xs md:text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)] col-span-2 sm:col-span-1 w-full sm:w-auto mt-2 sm:mt-0"
           >
-            <Plus className="w-4 h-4" />
-            {showAddForm && !editingMember ? "Close Form" : "Add Member"}
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>{showAddForm && !editingMember ? "Close Form" : "Add Member"}</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 shadow-lg">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Members</p>
-          <p className="mt-2 text-3xl font-black font-display text-slate-100">{totalMembers}</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-lg col-span-2 md:col-span-1">
+          <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Total Members</p>
+          <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-slate-100">{totalMembers}</p>
         </div>
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 shadow-lg">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest text-blue-400">Active Males</p>
-          <p className="mt-2 text-3xl font-black font-display text-blue-500">{totalMales}</p>
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-lg">
+          <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-blue-400">Active Males</p>
+          <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-blue-500">{totalMales}</p>
         </div>
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 shadow-lg">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest text-pink-400">Active Females</p>
-          <p className="mt-2 text-3xl font-black font-display text-pink-500">{totalFemales}</p>
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-lg">
+          <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-pink-400">Active Females</p>
+          <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-pink-500">{totalFemales}</p>
         </div>
       </div>
 
       {showAddForm && (
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-xl animate-in fade-in duration-200">
-          <h3 className="text-lg font-bold text-white mb-6">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl animate-in fade-in duration-200">
+          <h3 className="text-base md:text-lg font-bold text-white mb-4 md:mb-6">
             {editingMember ? `📝 Edit Member: ${editingMember.fullName}` : "👤 New Member Registration"}
           </h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Full Number & Surname *</label>
-                <input required type="text" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm" placeholder="Johnathan Doe" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Full Name *</label>
+                <input required type="text" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="Johnathan Doe" />
              </div>
              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Position / Office</label>
-                <input type="text" value={form.position} onChange={e => setForm({...form, position: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm" placeholder="e.g. Deacon, Pastor, Elder, Choir Member" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Position / Office</label>
+                <input type="text" value={form.position} onChange={e => setForm({...form, position: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="e.g. Deacon, Pastor, Elder, Choir Member" />
              </div>
              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Gender *</label>
-                <select required value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm">
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Gender *</label>
+                <select required value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm">
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>
              </div>
              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Department Group *</label>
-                <select required value={form.group} onChange={e => setForm({...form, group: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm">
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Department Group *</label>
+                <select required value={form.group} onChange={e => setForm({...form, group: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm">
                   <option value="Adult">Adult</option>
                   <option value="Youth">Youth</option>
                   <option value="Sunday School">Sunday School</option>
                 </select>
              </div>
              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Phone</label>
-                <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm" placeholder="e.g. +263 77..." />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Phone</label>
+                <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="e.g. +263 77..." />
              </div>
              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Email Address</label>
-                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm" placeholder="member@domain.com" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Email Address</label>
+                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="member@domain.com" />
              </div>
              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Home Address</label>
-                <input required type="text" value={form.address || ""} onChange={e => setForm({...form, address: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm" placeholder="Street Number, Surburb, City Name" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Home Address</label>
+                <input required type="text" value={form.address || ""} onChange={e => setForm({...form, address: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="Street Number, Surburb, City Name" />
              </div>
              <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-midnight-800">
-                <button type="button" onClick={cancelForm} className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-slate-100 transition">Cancel</button>
-                <button type="submit" className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-bold px-5 py-2 rounded-md text-sm transition">
+                <button type="button" onClick={cancelForm} className="px-4 py-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-slate-100 transition">Cancel</button>
+                <button type="submit" className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-bold px-4 py-2 md:px-5 rounded-md text-xs md:text-sm transition">
                   {editingMember ? "Save Changes" : "Save Member"}
                 </button>
              </div>
@@ -461,11 +484,22 @@ export function Members() {
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Data Table Area */}
       <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-2xl">
+        {/* Search Bar Header */}
+        <div className="p-4 border-b border-midnight-800 bg-midnight-950/30 flex items-center gap-2">
+          <Search className="w-4 h-4 text-slate-500" />
+          <input 
+            type="text" 
+            placeholder="Search members by name, email, or role..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-transparent border-none outline-none text-slate-200 text-sm w-full placeholder:text-slate-500"
+          />
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-midnight-950 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs md:text-sm whitespace-nowrap">
+            <thead className="bg-midnight-950 text-slate-400 font-semibold uppercase text-[9px] md:text-[10px] tracking-wider">
               <tr>
                 <th className="px-6 py-4 border-b border-midnight-800">Full Name</th>
                 <th className="px-6 py-4 border-b border-midnight-800">Position</th>

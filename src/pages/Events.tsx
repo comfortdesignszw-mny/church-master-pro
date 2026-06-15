@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ChurchEvent } from "@/db";
-import { Calendar as CalendarIcon, Clock, MapPin, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Plus, Bell, BellRing } from "lucide-react";
 
 export function Events() {
   const events = useLiveQuery(() => db.events.toArray()) || [];
@@ -34,6 +34,33 @@ export function Events() {
     "Other"
   ];
 
+  const toggleReminder = async (event: ChurchEvent & { reminderSet?: boolean }) => {
+    if (!event.id) return;
+    try {
+      const newState = !event.reminderSet;
+      await db.events.update(event.id, { reminderSet: newState });
+      
+      if (newState) {
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+             new Notification('Reminder Set', { body: `You will be reminded about ${event.name} on ${event.date}`});
+          } else if (Notification.permission !== 'denied') {
+             const permission = await Notification.requestPermission();
+             if (permission === 'granted') {
+                new Notification('Reminder Set', { body: `You will be reminded about ${event.name} on ${event.date}`});
+             }
+          } else {
+             alert(`Reminder saved locally for ${event.name}!`);
+          }
+        } else {
+          alert(`Reminder saved locally for ${event.name}!`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle reminder', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -61,32 +88,32 @@ export function Events() {
     <div className="space-y-8">
        <div className="flex sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div>
-          <h2 className="text-2xl font-display font-bold text-slate-100">Events Management</h2>
-          <p className="mt-1 text-sm text-slate-400">Plan upcoming church gatherings and targets.</p>
+          <h2 className="text-xl md:text-2xl font-display font-bold text-slate-100">Events Management</h2>
+          <p className="mt-1 text-xs md:text-sm text-slate-400">Plan upcoming church gatherings and targets.</p>
         </div>
         <div>
           <button 
             onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-4 py-2 rounded-md font-medium text-sm transition"
+            className="w-full sm:w-auto inline-flex justify-center items-center gap-1.5 md:gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-xs md:text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)]"
           >
-            <Plus className="w-4 h-4" />
-            Create Event
+            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
+            <span>Create Event</span>
           </button>
         </div>
       </div>
 
       {showAddForm && (
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-lg font-medium text-slate-200 mb-6">New Event Details</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="md:col-span-2 space-y-4">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 animate-in fade-in slide-in-from-top-4 shadow-xl">
+          <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4 md:mb-6">New Event Details</h3>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+             <div className="md:col-span-2 space-y-3 md:space-y-4">
                 <div>
-                   <label className="block text-sm font-medium text-slate-300 mb-2">Event Name *</label>
+                   <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Event Name *</label>
                    <select 
                      required 
                      value={nameOption} 
                      onChange={e => setNameOption(e.target.value)} 
-                     className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                     className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm"
                    >
                      {eventPresets.map(preset => (
                        <option key={preset} value={preset}>{preset}</option>
@@ -95,54 +122,54 @@ export function Events() {
                 </div>
                 {nameOption === "Other" && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-155">
-                     <label className="block text-sm font-medium text-slate-300 mb-2">Specify Other Event Name *</label>
+                     <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Specify Other Event Name *</label>
                      <input 
                        required 
                        type="text" 
                        value={customName} 
                        onChange={e => setCustomName(e.target.value)} 
-                       className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 font-bold" 
+                       className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 font-bold text-xs md:text-sm" 
                        placeholder="Specify custom event title" 
                      />
                   </div>
                 )}
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Start Date *</label>
-                <input required type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Start Date *</label>
+                <input required type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">End Date (Optional)</label>
-                <input type="date" value={form.endDate || ""} min={form.date} onChange={e => setForm({...form, endDate: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">End Date (Optional)</label>
+                <input type="date" value={form.endDate || ""} min={form.date} onChange={e => setForm({...form, endDate: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Time</label>
-                <input type="time" value={form.time} onChange={e => setForm({...form, time: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Time</label>
+                <input type="time" value={form.time} onChange={e => setForm({...form, time: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Venue</label>
-                <input type="text" value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Venue</label>
+                <input type="text" value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Financial Target (Optional)</label>
-                <input type="number" min="0" step="0.01" value={form.expectedContribution} onChange={e => setForm({...form, expectedContribution: Number(e.target.value)})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500" />
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Financial Target (Optional)</label>
+                <input type="number" min="0" step="0.01" value={form.expectedContribution} onChange={e => setForm({...form, expectedContribution: Number(e.target.value)})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              
-             <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100 transition">Cancel</button>
-                <button type="submit" className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-medium px-4 py-2 rounded-md text-sm transition">Save Event</button>
+             <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-midnight-800">
+                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-slate-100 transition">Cancel</button>
+                <button type="submit" className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-bold px-4 md:px-5 py-2 rounded-md text-xs md:text-sm transition">Save Event</button>
              </div>
           </form>
         </div>
       )}
 
       {/* Events Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         {events.length === 0 && !showAddForm && (
-          <div className="col-span-full border-2 border-dashed border-midnight-800 rounded-xl p-12 text-center">
-             <CalendarIcon className="w-12 h-12 text-midnight-700 mx-auto mb-4" />
-             <h3 className="text-lg font-medium text-slate-300">No Events Scheduled</h3>
-             <p className="text-sm text-slate-500 mt-2">Create an event to start tracking contributions specific to it.</p>
+          <div className="col-span-full border-2 border-dashed border-midnight-800 rounded-xl p-8 md:p-12 text-center">
+             <CalendarIcon className="w-10 h-10 md:w-12 md:h-12 text-midnight-700 mx-auto mb-3 md:mb-4" />
+             <h3 className="text-base md:text-lg font-bold text-slate-300">No Events Scheduled</h3>
+             <p className="text-xs md:text-sm text-slate-500 mt-1.5 md:mt-2">Create an event to start tracking contributions specific to it.</p>
           </div>
         )}
         
@@ -171,7 +198,20 @@ export function Events() {
 
           return (
             <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-sm flex flex-col h-full hover:border-midnight-700 transition">
-              <h3 className="font-display font-bold text-xl text-slate-100 mb-4">{event.name}</h3>
+              <div className="flex justify-between items-start mb-4 gap-2">
+                <h3 className="font-display font-bold text-xl text-slate-100 leading-tight">{event.name}</h3>
+                <button 
+                  onClick={() => toggleReminder(event as any)}
+                  className={`p-2 rounded-full border transition-colors shrink-0 ${
+                    (event as any).reminderSet 
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' 
+                      : 'bg-midnight-800 border-midnight-700 text-slate-500 hover:text-slate-300 hover:bg-midnight-700'
+                  }`}
+                  title={(event as any).reminderSet ? 'Reminder Set' : 'Set Reminder'}
+                >
+                  {(event as any).reminderSet ? <BellRing className="w-4 h-4 animate-pulse" /> : <Bell className="w-4 h-4" />}
+                </button>
+              </div>
               
               <div className="space-y-3 mb-6 flex-1 text-sm text-slate-300">
                 <div className="flex items-start gap-3">
