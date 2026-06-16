@@ -23,7 +23,7 @@ export function Events() {
     "May Lord's Super",
     "Pentecoast Conference",
     "July Meeting",
-    "Mothers' Conference",
+    "Women's Conference",
     "10 Days Conference",
     "The Feast of Booths",
     "Int'l Youth Conference",
