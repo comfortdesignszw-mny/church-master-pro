@@ -639,7 +639,7 @@ export function BibleStudy() {
         <div className="xl:col-span-3 space-y-4 md:space-y-6">
           
           {/* Active Version Manager Box */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-sm space-y-3 md:space-y-4">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 neon-glow space-y-3 md:space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-gold-500" />
               Hydrated Translations
@@ -713,7 +713,7 @@ export function BibleStudy() {
           </div>
 
           {/* Bookmarks Section */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 neon-glow space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <BookMarked className="w-4 h-4 text-blue-400" />
               Bookmarked Verses
@@ -754,7 +754,7 @@ export function BibleStudy() {
           </div>
 
           {/* Recent Notes List */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-5 neon-glow space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-500" />
@@ -825,7 +825,7 @@ export function BibleStudy() {
         <div className={`xl:col-span-9 grid grid-cols-1 ${showNotepad ? 'lg:grid-cols-2' : ''} gap-4 md:gap-6 lg:h-[750px]`}>
           
           {/* INTERACTIVE BIBLE READER COLUMN */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-md flex flex-col h-[500px] lg:h-full">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow flex flex-col h-[500px] lg:h-full">
             
             {/* Nav Header Controls */}
             <div className="p-3 md:p-4 bg-midnight-950 border-b border-midnight-800 flex flex-wrap items-center justify-between gap-2 md:gap-4 shrink-0">
@@ -1011,7 +1011,7 @@ export function BibleStudy() {
 
           {/* SPLIT SCREEN RICH-TEXT NOTEPAD COLUMN */}
           {showNotepad && (
-            <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-md flex flex-col h-[500px] lg:h-full animate-in slide-in-from-right-4 fade-in duration-200">
+            <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow flex flex-col h-[500px] lg:h-full animate-in slide-in-from-right-4 fade-in duration-200">
               
               {/* Document/Notepad Header Title Input */}
               <div className="p-4 bg-midnight-950 border-b border-midnight-800 flex items-center justify-between gap-4 shrink-0">

@@ -46,3 +46,37 @@
     --color-gold-600: #92400e;
   }
 }
+
+@layer utilities {
+  .neon-glow {
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+    transition: box-shadow 0.3s ease-in-out;
+  }
+  .neon-glow:hover {
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
+  }
+
+  .neon-glow-gold {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+    transition: box-shadow 0.3s ease-in-out;
+  }
+  .neon-glow-gold:hover {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+  }
+
+  .neon-glow-emerald {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    transition: box-shadow 0.3s ease-in-out;
+  }
+  .neon-glow-emerald:hover {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+  }
+  
+  .neon-glow-rose {
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.15);
+    transition: box-shadow 0.3s ease-in-out;
+  }
+  .neon-glow-rose:hover {
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.4);
+  }
+}

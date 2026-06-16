@@ -286,7 +286,7 @@ export function Settings() {
         <div className="lg:col-span-2 space-y-6 md:space-y-8">
           
           {/* Church Settings Panel */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
             <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800 flex items-center justify-between">
               <h3 className="text-base md:text-lg font-medium text-slate-200">Church Profile</h3>
               <span className="text-[9px] md:text-[10px] bg-gold-950 border border-gold-500/20 text-gold-400 px-2.5 py-0.5 rounded-full font-bold">IDENTITY</span>
@@ -343,7 +343,7 @@ export function Settings() {
           </div>
 
           {/* Personal Settings Panel */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
             <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800 flex items-center justify-between">
               <h3 className="text-base md:text-lg font-medium text-slate-200">Personal Profile</h3>
               <span className="text-[9px] md:text-[10px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-bold">ADMINISTRATOR</span>
@@ -396,7 +396,7 @@ export function Settings() {
           </div>
 
           {/* 🔐 App Security & PIN lock configuration Card */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-lg">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
             <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Key className="w-4 h-4 md:w-5 md:h-5 text-gold-500" />
@@ -486,7 +486,7 @@ export function Settings() {
           </div>
 
           {/* 🗄️ Database Backup & Restore */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-lg">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
             <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />

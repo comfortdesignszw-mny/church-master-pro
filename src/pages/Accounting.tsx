@@ -330,7 +330,7 @@ export function Accounting() {
 
       {viewMode === 'reports' ? (
         <div className="space-y-6">
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 neon-glow">
              <div className="flex justify-between items-center mb-6">
                <h3 className="text-lg font-bold text-slate-200">Quarterly Financial Summaries</h3>
                
@@ -399,7 +399,7 @@ export function Accounting() {
         <>
           {/* Financial Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 relative overflow-hidden shadow-lg">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 relative overflow-hidden neon-glow">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <Wallet className="w-16 h-16 md:w-24 md:h-24" />
           </div>
@@ -407,14 +407,14 @@ export function Accounting() {
           <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-slate-100 truncate">${treasuryBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:hidden">
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 shadow-lg">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 neon-glow">
             <p className="flex items-center gap-1 text-[9px] font-bold tracking-widest uppercase text-slate-400">
                <ArrowUpRight className="w-3 h-3 text-emerald-400 shrink-0" />
                Inflow
             </p>
             <p className="mt-1 text-xl font-black font-display text-emerald-400 truncate">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 1})}</p>
           </div>
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 shadow-lg">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 neon-glow">
             <p className="flex items-center gap-1 text-[9px] font-bold tracking-widest uppercase text-slate-400">
                <ArrowDownRight className="w-3 h-3 text-rose-400 shrink-0" />
                Outflow
@@ -423,14 +423,14 @@ export function Accounting() {
           </div>
         </div>
         
-        <div className="hidden md:block bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-lg">
+        <div className="hidden md:block bg-midnight-900 border border-midnight-800 rounded-xl p-6 neon-glow">
           <p className="flex items-center gap-2 text-sm font-bold tracking-widest uppercase text-slate-400">
              <ArrowUpRight className="w-4 h-4 text-emerald-400 shrink-0" />
              Total Inflow
           </p>
           <p className="mt-2 text-3xl font-black font-display text-emerald-400 truncate">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
         </div>
-        <div className="hidden md:block bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-lg">
+        <div className="hidden md:block bg-midnight-900 border border-midnight-800 rounded-xl p-6 neon-glow">
           <p className="flex items-center gap-2 text-sm font-bold tracking-widest uppercase text-slate-400">
              <ArrowDownRight className="w-4 h-4 text-rose-400 shrink-0" />
              Total Outflow
@@ -439,7 +439,7 @@ export function Accounting() {
         </div>
       </div>
 
-      <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl">
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 neon-glow">
         <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4">Monthly Collections & Offerings</h3>
         <div className="h-[250px] md:h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -571,7 +571,7 @@ export function Accounting() {
     )}
 
       {/* Transaction History */}
-      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-xl">
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
         <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800">
           <h3 className="text-base md:text-lg font-bold text-slate-200">Transaction History</h3>
         </div>

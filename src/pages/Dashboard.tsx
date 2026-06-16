@@ -174,7 +174,7 @@ export function Dashboard() {
         )}
 
         {/* Main Section */}
-        <div className="col-span-1 md:col-span-12 lg:col-span-8 bg-midnight-900 border border-midnight-800 rounded-xl flex flex-col shadow-2xl">
+        <div className="col-span-1 md:col-span-12 lg:col-span-8 bg-midnight-900 border border-midnight-800 rounded-xl flex flex-col neon-glow">
           <div className="p-4 md:p-6 border-b border-midnight-800 flex justify-between items-center">
              <h3 className="text-white font-bold text-sm md:text-base">Top Income Categories</h3>
           </div>
@@ -203,7 +203,7 @@ export function Dashboard() {
 
         {/* Side Section */}
         <div className="col-span-1 md:col-span-12 lg:col-span-4 flex flex-col gap-4 md:gap-6">
-          <div className="flex-1 bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl">
+          <div className="flex-1 bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 neon-glow">
              <div className="flex items-center justify-between mb-4">
                <h3 className="text-sm font-bold text-white">Member Distribution</h3>
              </div>
@@ -248,7 +248,7 @@ export function Dashboard() {
           </div>
 
           {/* Upcoming Birthdays widget */}
-          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl relative overflow-hidden">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 neon-glow relative overflow-hidden">
              <div className="flex items-center justify-between mb-4">
                <h3 className="text-sm font-bold text-white flex items-center gap-2">
                  🎉 Upcoming Birthdays

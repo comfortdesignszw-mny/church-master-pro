@@ -524,22 +524,22 @@ export function Members() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-lg col-span-2 md:col-span-1">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 neon-glow col-span-2 md:col-span-1">
           <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Total Members</p>
           <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-slate-100">{totalMembers}</p>
         </div>
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-lg">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 neon-glow">
           <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-blue-400">Active Males</p>
           <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-blue-500">{totalMales}</p>
         </div>
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 shadow-lg">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-5 neon-glow">
           <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-pink-400">Active Females</p>
           <p className="mt-1 md:mt-2 text-2xl md:text-3xl font-black font-display text-pink-500">{totalFemales}</p>
         </div>
       </div>
 
       {showAddForm && (
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl animate-in fade-in duration-200">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 neon-glow animate-in fade-in duration-200">
           <div className="flex justify-between items-center mb-4 md:mb-6">
             <h3 className="text-base md:text-lg font-bold text-white">
               {editingMember ? `📝 Edit Member: ${editingMember.fullName}` : "👤 New Member Registration"}
@@ -606,7 +606,7 @@ export function Members() {
       )}
 
       {/* Data Table Area */}
-      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
         {/* Search Bar Header */}
         <div className="p-4 border-b border-midnight-800 bg-midnight-950/30 flex items-center gap-2">
           <Search className="w-4 h-4 text-slate-500" />
@@ -690,7 +690,7 @@ export function Members() {
       </div>
 
       {/* Member Contribution Analysis Subsection */}
-      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
         <div className="px-6 py-5 border-b border-midnight-800 flex justify-between items-center bg-midnight-950/20 gap-4 flex-wrap">
           <div>
             <h3 className="text-lg font-bold text-white">Member Contribution Analysis</h3>

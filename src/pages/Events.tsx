@@ -188,7 +188,7 @@ Please join us!`;
       </div>
 
       {showAddForm && (
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 animate-in fade-in slide-in-from-top-4 shadow-xl">
+        <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 animate-in fade-in slide-in-from-top-4 neon-glow">
           <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4 md:mb-6">{eventsFormMode === 'edit' ? 'Edit Event Details' : 'New Event Details'}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
              <div className="md:col-span-2 space-y-3 md:space-y-4">
@@ -283,7 +283,7 @@ Please join us!`;
           const percentRemaining = target > 0 ? (remaining / target) * 100 : 0;
 
           return (
-            <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-sm flex flex-col h-full hover:border-midnight-700 transition">
+            <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 neon-glow flex flex-col h-full hover:border-midnight-700 transition">
               <div className="flex justify-between items-start mb-4 gap-2">
                 <div>
                   <h3 className="font-display font-bold text-xl text-slate-100 leading-tight">{event.name}</h3>
