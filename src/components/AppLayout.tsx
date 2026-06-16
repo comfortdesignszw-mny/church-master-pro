@@ -18,9 +18,14 @@ export function AppLayout() {
     localStorage.setItem('cm_theme', theme);
   }, [theme]);
 
-  // Check for upcoming event reminders every minute while the app is open
+  // Check for upcoming event reminders and birthdays every minute while the app is open
   useEffect(() => {
-    const checkReminders = async () => {
+    // Request notification permission if it hasn't been explicitly granted or denied yet
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const checkNotifications = async () => {
       // Must have permission
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
       
@@ -62,11 +67,38 @@ export function AppLayout() {
           icon: '/src/assets/images/church_master_icon_1781535615677.jpg'
         });
       });
+
+      // Check for birthdays today
+      const allMembers = await db.members.toArray();
+      const currentMonth = now.getMonth() + 1; // 1-12
+      const currentDay = now.getDate();
+      const currentYear = now.getFullYear();
+
+      allMembers.forEach(m => {
+        if (m.dob) {
+          const dobParts = m.dob.split('-'); // assuming YYYY-MM-DD format from input type="date"
+          if (dobParts.length === 3) {
+            const bMonth = parseInt(dobParts[1], 10);
+            const bDay = parseInt(dobParts[2], 10);
+            
+            if (bMonth === currentMonth && bDay === currentDay) {
+               const bdayKey = `birthday_reminded_${m.id}_${currentYear}`;
+               if (!localStorage.getItem(bdayKey)) {
+                 localStorage.setItem(bdayKey, 'true');
+                 new Notification('Birthday Alert! 🎉', {
+                   body: `Today is ${m.fullName}'s birthday! Wish them well!`,
+                   icon: '/src/assets/images/church_master_icon_1781535615677.jpg'
+                 });
+               }
+            }
+          }
+        }
+      });
     };
 
-    const interval = setInterval(checkReminders, 1000 * 60); // Check every minute
+    const interval = setInterval(checkNotifications, 1000 * 60); // Check every minute
     // Initial check
-    setTimeout(checkReminders, 5000);
+    setTimeout(checkNotifications, 5000);
 
     return () => clearInterval(interval);
   }, []);

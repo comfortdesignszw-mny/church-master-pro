@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ChurchEvent } from "@/db";
-import { Calendar as CalendarIcon, Clock, MapPin, Plus, Bell, BellRing } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Plus, Bell, BellRing, Edit2, Trash2, Share2 } from "lucide-react";
 
 export function Events() {
   const events = useLiveQuery(() => db.events.toArray()) || [];
@@ -17,6 +17,9 @@ export function Events() {
     time: "",
     expectedContribution: 0
   });
+
+  const [eventsFormMode, setEventsFormMode] = useState<'add' | 'edit'>('add');
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
 
   const eventPresets = [
     "International Lord's Super",
@@ -69,19 +72,96 @@ export function Events() {
         alert("Please provide or select a valid event name.");
         return;
       }
-      await db.events.add({
-        ...form,
-        name: finalEventName,
-        expectedContribution: Number(form.expectedContribution)
-      });
+      if (eventsFormMode === 'edit' && editingEventId) {
+        await db.events.update(editingEventId, {
+          ...form,
+          name: finalEventName,
+          expectedContribution: Number(form.expectedContribution)
+        });
+      } else {
+        await db.events.add({
+          ...form,
+          name: finalEventName,
+          expectedContribution: Number(form.expectedContribution)
+        });
+      }
       setForm({ name: "International Lord's Super", venue: "", date: "", endDate: "", time: "", expectedContribution: 0 });
       setNameOption("International Lord's Super");
       setCustomName("");
       setShowAddForm(false);
+      setEventsFormMode('add');
+      setEditingEventId(null);
     } catch (error) {
       console.error(error);
       alert('Failed to save event');
     }
+  };
+
+  const handleEditEvent = (event: ChurchEvent) => {
+    if (eventPresets.includes(event.name)) {
+      setNameOption(event.name);
+      setCustomName("");
+    } else {
+      setNameOption("Other");
+      setCustomName(event.name);
+    }
+    setForm({
+      name: event.name,
+      venue: event.venue || "",
+      date: event.date || "",
+      endDate: event.endDate || "",
+      time: event.time || "",
+      expectedContribution: event.expectedContribution || 0
+    });
+    setEditingEventId(event.id || null);
+    setEventsFormMode('edit');
+    setShowAddForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteEvent = async (id?: number) => {
+    if (!id) return;
+    if (window.confirm("Are you sure you want to delete this event? All associated records will be lost.")) {
+      await db.events.delete(id);
+    }
+  };
+
+  const handleShareEvent = async (event: ChurchEvent) => {
+    const text = `Join us for ${event.name}!
+Date: ${event.date}${event.endDate ? ` to ${event.endDate}` : ''}
+${event.time ? `Time: ${event.time}` : ''}
+${event.venue ? `Venue: ${event.venue}` : ''}
+Target: $${(event.expectedContribution || 0).toLocaleString()}
+Please join us!`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.name,
+          text: text
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      alert('Event details copied to clipboard!');
+    }
+  };
+
+  const getEventStatus = (date: string, endDate?: string) => {
+    if (!date) return { status: 'Passed', color: 'bg-red-500', text: 'text-red-500' };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(date);
+    start.setHours(0,0,0,0);
+
+    const end = endDate ? new Date(endDate) : new Date(date);
+    end.setHours(0,0,0,0);
+
+    if (today < start) return { status: 'Oncoming', color: 'bg-yellow-500', text: 'text-yellow-500' };
+    if (today >= start && today <= end) return { status: 'Happening', color: 'bg-emerald-500', text: 'text-emerald-500' };
+    return { status: 'Passed', color: 'bg-red-500', text: 'text-red-500' };
   };
 
   return (
@@ -93,7 +173,12 @@ export function Events() {
         </div>
         <div>
           <button 
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              setEventsFormMode('add');
+              setForm({ name: "International Lord's Super", venue: "", date: "", endDate: "", time: "", expectedContribution: 0 });
+              setNameOption("International Lord's Super");
+              setShowAddForm(!showAddForm);
+            }}
             className="w-full sm:w-auto inline-flex justify-center items-center gap-1.5 md:gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-xs md:text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)]"
           >
             <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
@@ -104,7 +189,7 @@ export function Events() {
 
       {showAddForm && (
         <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 animate-in fade-in slide-in-from-top-4 shadow-xl">
-          <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4 md:mb-6">New Event Details</h3>
+          <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4 md:mb-6">{eventsFormMode === 'edit' ? 'Edit Event Details' : 'New Event Details'}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
              <div className="md:col-span-2 space-y-3 md:space-y-4">
                 <div>
@@ -156,8 +241,8 @@ export function Events() {
              </div>
              
              <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-midnight-800">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-slate-100 transition">Cancel</button>
-                <button type="submit" className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-bold px-4 md:px-5 py-2 rounded-md text-xs md:text-sm transition">Save Event</button>
+                <button type="button" onClick={() => { setShowAddForm(false); setEventsFormMode('add'); }} className="px-4 py-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-slate-100 transition">Cancel</button>
+                <button type="submit" className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-bold px-4 md:px-5 py-2 rounded-md text-xs md:text-sm transition">{eventsFormMode === 'edit' ? 'Update Event' : 'Save Event'}</button>
              </div>
           </form>
         </div>
@@ -187,22 +272,52 @@ export function Events() {
             : formattedDate;
 
           const target = event.expectedContribution || 0;
+          const statusInfo = getEventStatus(event.date || "", event.endDate);
 
           return (
             <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-sm flex flex-col h-full hover:border-midnight-700 transition">
               <div className="flex justify-between items-start mb-4 gap-2">
-                <h3 className="font-display font-bold text-xl text-slate-100 leading-tight">{event.name}</h3>
-                <button 
-                  onClick={() => toggleReminder(event as any)}
-                  className={`p-2 rounded-full border transition-colors shrink-0 ${
-                    (event as any).reminderSet 
-                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' 
-                      : 'bg-midnight-800 border-midnight-700 text-slate-500 hover:text-slate-300 hover:bg-midnight-700'
-                  }`}
-                  title={(event as any).reminderSet ? 'Reminder Set' : 'Set Reminder'}
-                >
-                  {(event as any).reminderSet ? <BellRing className="w-4 h-4 animate-pulse" /> : <Bell className="w-4 h-4" />}
-                </button>
+                <div>
+                  <h3 className="font-display font-bold text-xl text-slate-100 leading-tight">{event.name}</h3>
+                  <div className="flex items-center gap-1.5 mt-2">
+                     <span className={`w-2 h-2 rounded-full ${statusInfo.color} animate-pulse`} />
+                     <span className={`text-[10px] font-bold uppercase tracking-wider ${statusInfo.text}`}>{statusInfo.status}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => handleShareEvent(event)}
+                    className="p-2 rounded-full bg-midnight-800 border-midnight-700 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-colors"
+                    title="Share Event"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => handleEditEvent(event)}
+                    className="p-2 rounded-full bg-midnight-800 border-midnight-700 text-slate-400 hover:bg-midnight-700 hover:text-white transition-colors"
+                    title="Edit Event"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => toggleReminder(event as any)}
+                    className={`p-2 rounded-full border transition-colors shrink-0 ${
+                      (event as any).reminderSet 
+                        ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' 
+                        : 'bg-midnight-800 border-midnight-700 text-slate-500 hover:text-slate-300 hover:bg-midnight-700'
+                    }`}
+                    title={(event as any).reminderSet ? 'Reminder Set' : 'Set Reminder'}
+                  >
+                    {(event as any).reminderSet ? <BellRing className="w-4 h-4 animate-pulse" /> : <Bell className="w-4 h-4" />}
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteEvent(event.id)}
+                    className="p-2 rounded-full bg-midnight-800 border-midnight-700 text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-colors shrink-0 ml-1"
+                    title="Delete Event"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               
               <div className="space-y-3 mb-6 flex-1 text-sm text-slate-300">

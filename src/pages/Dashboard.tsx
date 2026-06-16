@@ -49,8 +49,13 @@ export function Dashboard() {
   const upcomingEventsList = React.useMemo(() => {
     return events.filter(e => {
       if (!e.date) return false;
-      const evtDate = new Date(e.date);
-      return evtDate >= new Date(Date.now() - 24 * 60 * 60 * 1000); // Today or future
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const end = e.endDate ? new Date(e.endDate) : new Date(e.date);
+      end.setHours(0, 0, 0, 0);
+
+      return today <= end; // Keep oncoming and happening
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [events]);
 
