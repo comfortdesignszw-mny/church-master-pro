@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Member } from "@/db";
-import { Download, Plus, FileSpreadsheet, Edit2, Trash2, Share2, CircleAlert, CheckCircle2, Search } from "lucide-react";
+import { Download, Plus, FileSpreadsheet, Edit2, Trash2, Share2, CircleAlert, CheckCircle2, Search, Upload } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useSearchParams } from "react-router-dom";
@@ -106,6 +106,72 @@ export function Members() {
         showToast("Failed to copy details to clipboard.");
       }
     }
+  };
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleBulkImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim() !== '');
+      if (lines.length < 2) {
+        showToast("CSV file must contain a header and at least one member row.");
+        return;
+      }
+      
+      const headers = lines[0].toLowerCase().split(',');
+      const rows = lines.slice(1);
+      
+      let importedCount = 0;
+      for (const row of rows) {
+        const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const memberData: any = {};
+        
+        headers.forEach((headerRaw, idx) => {
+          const header = headerRaw.trim().replace(/^"|"$/g, '');
+          const val = cols[idx] || '';
+          if (header.includes('name')) memberData.fullName = val;
+          else if (header.includes('position') || header.includes('role')) memberData.position = val;
+          else if (header.includes('gender')) memberData.gender = val;
+          else if (header.includes('group')) memberData.group = val;
+          else if (header.includes('phone')) memberData.phone = val;
+          else if (header.includes('email')) memberData.email = val;
+          else if (header.includes('address')) memberData.address = val;
+          else if (header.includes('dob')) memberData.dob = val;
+        });
+        
+        if (!memberData.fullName) continue; // skip if no name
+        
+        // Validation check for duplicates
+        if (memberData.email || memberData.phone) {
+           const existing = membersData.find(m => 
+             (m.email && memberData.email && m.email.toLowerCase() === memberData.email.toLowerCase()) ||
+             (m.phone && memberData.phone && m.phone === memberData.phone)
+           );
+           if (existing) continue; // Skip existing
+        }
+        
+        await db.members.add({
+          fullName: memberData.fullName,
+          position: memberData.position || 'Member',
+          gender: memberData.gender || 'Male',
+          group: memberData.group || 'Adult',
+          phone: memberData.phone || '',
+          email: memberData.email || '',
+          address: memberData.address || '',
+          dob: memberData.dob || ''
+        });
+        importedCount++;
+      }
+      
+      showToast(`Successfully imported ${importedCount} member(s).`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsText(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -390,6 +456,20 @@ export function Members() {
           <p className="mt-1 text-xs md:text-sm text-slate-400">Manage member records, credentials, and contributions.</p>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-2.5">
+          <input 
+            type="file" 
+            accept=".csv" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={handleBulkImport} 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center"
+          >
+            <Upload className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-400 shrink-0" />
+            <span className="truncate">Bulk Import CSV</span>
+          </button>
           <button 
             onClick={generatePDF}
             className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center"

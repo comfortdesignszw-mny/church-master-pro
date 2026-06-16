@@ -52,6 +52,9 @@ export function Accounting() {
   const [memberOption, setMemberOption] = useState<string>("anonymous");
   const [newMemberName, setNewMemberName] = useState<string>("");
 
+  const [viewMode, setViewMode] = useState<'ledger' | 'reports'>('ledger');
+  const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
+
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
       setShowAddForm(true);
@@ -142,6 +145,66 @@ export function Accounting() {
     link.click();
   };
 
+  const generateQuarterlyReport = (quarter: number) => {
+    const doc = new jsPDF();
+    let textStartX = 14;
+    
+    if (churchSettings && churchSettings.logo) {
+      try {
+        doc.addImage(churchSettings.logo, 'JPEG', 14, 12, 18, 18);
+        textStartX = 36;
+      } catch (err) {
+        console.error("Error inserting logo into PDF:", err);
+      }
+    }
+    
+    if (churchSettings) {
+      doc.setFontSize(18);
+      doc.text(churchSettings.name.toUpperCase(), textStartX, 20);
+      doc.setFontSize(10);
+      doc.text(`${churchSettings.branch || 'Main Branch'} • ${churchSettings.district || 'District'}`, textStartX, 28);
+    } else {
+      doc.setFontSize(18);
+      doc.text("Financial Ledger", 14, 20);
+    }
+
+    const quarterNames = ["Q1 (Jan - Mar)", "Q2 (Apr - Jun)", "Q3 (Jul - Sep)", "Q4 (Oct - Dec)"];
+    const qName = quarterNames[quarter - 1];
+    
+    doc.setFontSize(14);
+    doc.text(`${reportYear} ${qName} Financial Report`, 14, 45);
+
+    const startMonth = (quarter - 1) * 3;
+    const qTransactions = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getFullYear() === reportYear && d.getMonth() >= startMonth && d.getMonth() < startMonth + 3;
+    });
+
+    const income = qTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expense = qTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+    doc.setFontSize(11);
+    doc.text(`Total Income: $${income.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 55);
+    doc.text(`Total Expenses: $${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 62);
+    doc.text(`Net Balance: $${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 69);
+
+    autoTable(doc, {
+      startY: 75,
+      head: [['Date', 'Type', 'Category', 'Amount']],
+      body: qTransactions.map(t => [
+        format(new Date(t.date), 'MMM dd, yyyy'),
+        t.type.toUpperCase(),
+        t.category,
+        `$${t.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42] },
+      styles: { fontSize: 8 }
+    });
+
+    doc.save(`${reportYear}_Q${quarter}_Financial_Report.pdf`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -220,34 +283,121 @@ export function Accounting() {
           <h2 className="text-xl md:text-2xl font-display font-bold text-slate-100">Accounting & Treasury</h2>
           <p className="mt-1 text-xs md:text-sm text-slate-400">Manage church funds, incoming offerings, and expenses.</p>
         </div>
-        <div className="flex flex-wrap gap-2 md:gap-2.5">
-          <button 
-            disabled={transactions.length === 0}
-            onClick={generatePDF}
-            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center disabled:opacity-50"
-          >
-            <Download className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-400 shrink-0" />
-            <span className="truncate">Export PDF</span>
-          </button>
-          <button 
-            disabled={transactions.length === 0}
-            onClick={generateCSV}
-            className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center disabled:opacity-50"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-400 shrink-0" />
-            <span className="truncate">Export CSV</span>
-          </button>
-          <button 
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="w-full sm:w-auto inline-flex justify-center items-center gap-1.5 md:gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-xs md:text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)] col-span-2 mt-2 sm:mt-0"
-          >
-            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-            <span>{showAddForm ? 'Close Form' : 'New Transaction'}</span>
-          </button>
-        </div>
+        
+        {viewMode === 'ledger' && (
+          <div className="flex flex-wrap gap-2 md:gap-2.5">
+            <button 
+              disabled={transactions.length === 0}
+              onClick={generatePDF}
+              className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-400 shrink-0" />
+              <span className="truncate">Export PDF</span>
+            </button>
+            <button 
+              disabled={transactions.length === 0}
+              onClick={generateCSV}
+              className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 text-slate-200 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium text-xs md:text-sm transition flex-1 sm:flex-none justify-center disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-400 shrink-0" />
+              <span className="truncate">Export CSV</span>
+            </button>
+            <button 
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="w-full sm:w-auto inline-flex justify-center items-center gap-1.5 md:gap-2 bg-gold-500 hover:bg-gold-600 text-midnight-950 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-xs md:text-sm transition shadow-[0_0_15px_rgba(251,191,36,0.15)] col-span-2 mt-2 sm:mt-0"
+            >
+              <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
+              <span>{showAddForm ? 'Close Form' : 'New Transaction'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Financial Summary */}
+      <div className="flex border-b border-midnight-800">
+        <button
+          onClick={() => setViewMode('ledger')}
+          className={`px-4 xl:px-6 py-2.5 md:py-3 font-bold text-xs md:text-sm border-b-2 transition-colors ${viewMode === 'ledger' ? 'border-gold-500 text-gold-500' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-midnight-700'}`}
+        >
+          Ledger & Transactions
+        </button>
+        <button
+          onClick={() => setViewMode('reports')}
+          className={`px-4 xl:px-6 py-2.5 md:py-3 font-bold text-xs md:text-sm border-b-2 transition-colors ${viewMode === 'reports' ? 'border-gold-500 text-gold-500' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-midnight-700'}`}
+        >
+          Quarterly Reports
+        </button>
+      </div>
+
+      {viewMode === 'reports' ? (
+        <div className="space-y-6">
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6">
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="text-lg font-bold text-slate-200">Quarterly Financial Summaries</h3>
+               
+               <select 
+                 value={reportYear}
+                 onChange={(e) => setReportYear(Number(e.target.value))}
+                 className="bg-midnight-950 border border-midnight-700 rounded-md px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm font-bold"
+               >
+                 {Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).sort((a,b) => b-a).map(year => (
+                   <option key={year} value={year}>{year}</option>
+                 ))}
+                 {!Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).includes(new Date().getFullYear()) && (
+                   <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+                 )}
+               </select>
+             </div>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+               {[1, 2, 3, 4].map(quarter => {
+                 const startMonth = (quarter - 1) * 3;
+                 const qTransactions = transactions.filter(t => {
+                   const d = new Date(t.date);
+                   return d.getFullYear() === reportYear && d.getMonth() >= startMonth && d.getMonth() < startMonth + 3;
+                 });
+                 const income = qTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                 const expense = qTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+                 return (
+                   <div key={quarter} className="bg-midnight-950 border border-midnight-800 rounded-lg p-5 flex flex-col items-center text-center">
+                     <h4 className="font-bold text-sm text-gold-500 mb-1">Quarter {quarter}</h4>
+                     <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-4">
+                       {quarter === 1 ? 'Jan - Mar' : quarter === 2 ? 'Apr - Jun' : quarter === 3 ? 'Jul - Sep' : 'Oct - Dec'}
+                     </p>
+                     
+                     <div className="w-full space-y-2 mb-6">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Income</span>
+                          <span className="font-bold text-emerald-400">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Expenses</span>
+                          <span className="font-bold text-rose-400">${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="flex justify-between text-xs pt-2 border-t border-midnight-800">
+                          <span className="font-bold text-slate-300">Net</span>
+                          <span className={`font-bold ${(income - expense) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            ${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          </span>
+                        </div>
+                     </div>
+
+                     <button 
+                       onClick={() => generateQuarterlyReport(quarter)}
+                       className="w-full inline-flex items-center justify-center gap-1.5 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 text-slate-200 px-3 py-2 rounded text-xs font-semibold transition mt-auto"
+                     >
+                       <Download className="w-3.5 h-3.5 text-blue-400" />
+                       Download PDF
+                     </button>
+                   </div>
+                 );
+               })}
+             </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Financial Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
         <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 relative overflow-hidden shadow-lg">
           <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -482,6 +632,8 @@ export function Accounting() {
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

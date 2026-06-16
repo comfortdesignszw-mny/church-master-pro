@@ -553,6 +553,33 @@ export function BibleStudy() {
     }
   ];
 
+  // Export active note to PDF
+  const exportNotesPDF = () => {
+    if (!activeNote || !editorRef.current) {
+        triggerAlert("Please open a note with content to export", "error");
+        return;
+    }
+    
+    try {
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text(activeNote.title || "Untitled Study Note", 14, 20);
+        
+        doc.setFontSize(10);
+        doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 28);
+        
+        doc.setFontSize(12);
+        const splitText = doc.splitTextToSize(editorRef.current.innerText || "", 180);
+        doc.text(splitText, 14, 40);
+        
+        doc.save(`${(activeNote.title || "Notes").replace(/\s+/g, '_')}_Export.pdf`);
+        triggerAlert("Study note successfully exported as PDF", "success");
+    } catch (err) {
+        console.error(err);
+        triggerAlert("Failed to export PDF", "error");
+    }
+  };
+
   return (
     <div className="space-y-6 pb-24">
       {/* Header Info */}
@@ -1069,6 +1096,17 @@ export function BibleStudy() {
                 >
                   Reset Plain Text
                 </button>
+                <div className="ml-auto">
+                  <button
+                    type="button"
+                    onClick={exportNotesPDF}
+                    disabled={!activeNote}
+                    className="p-1.5 px-3 bg-midnight-850 hover:bg-midnight-800 border border-midnight-700 rounded text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition disabled:opacity-50"
+                    title="Export note as PDF"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-400" /> Export PDF
+                  </button>
+                </div>
               </div>
 
               {/* Notes content editable sandbox or Call to action */}

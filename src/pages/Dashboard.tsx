@@ -68,8 +68,21 @@ export function Dashboard() {
   }, [upcomingEventsList.length]);
 
   // Chart Data preparation
+  const passedEventsNames = React.useMemo(() => {
+    return events.filter(e => {
+      if (!e.date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const end = e.endDate ? new Date(e.endDate) : new Date(e.date);
+      end.setHours(0, 0, 0, 0);
+
+      return today > end; // passed
+    }).map(e => `${e.name} Contribution`);
+  }, [events]);
+
   const incomeCategoriesData = transactions
-    .filter(t => t.type === 'income')
+    .filter(t => t.type === 'income' && !passedEventsNames.includes(t.category))
     .reduce((acc, curr) => {
       acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
       return acc;

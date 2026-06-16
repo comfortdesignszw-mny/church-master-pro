@@ -273,6 +273,14 @@ Please join us!`;
 
           const target = event.expectedContribution || 0;
           const statusInfo = getEventStatus(event.date || "", event.endDate);
+          
+          const collected = transactions
+            .filter(t => t.type === 'income' && (t.category === `${event.name} Contribution` || t.eventId === event.id))
+            .reduce((sum, t) => sum + t.amount, 0);
+          
+          const remaining = Math.max(0, target - collected);
+          const percentCollected = target > 0 ? Math.min(100, (collected / target) * 100) : 0;
+          const percentRemaining = target > 0 ? (remaining / target) * 100 : 0;
 
           return (
             <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-sm flex flex-col h-full hover:border-midnight-700 transition">
@@ -340,12 +348,40 @@ Please join us!`;
               </div>
 
               {target > 0 && (
-                <div className="mt-auto pt-4 border-t border-midnight-800">
+                <div className="mt-auto pt-4 border-t border-midnight-800 space-y-3">
                   <div className="flex justify-between items-end">
                     <div>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Target</p>
-                      <p className="text-lg font-black text-white">${target.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                      <p className="text-sm font-bold text-slate-300">${target.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Collected</p>
+                      <p className="text-sm font-bold text-emerald-400">+${collected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    </div>
+                  </div>
+
+                  {/* Meter Progress */}
+                  <div className="relative w-full h-2 bg-midnight-950 rounded-full overflow-hidden">
+                    <div 
+                      className={`absolute left-0 top-0 h-full rounded-full transition-all duration-500 ${
+                        percentCollected >= 100 ? 'bg-gradient-to-r from-emerald-500 to-green-400 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-emerald-400'
+                      }`}
+                      style={{ width: `${percentCollected}%` }}
+                    />
+                  </div>
+
+                  {/* Breakdown details */}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400 font-medium font-mono">
+                      {percentCollected >= 100 ? (
+                        <span className="text-emerald-400 font-bold">🎉 Target Met!</span>
+                      ) : (
+                        <span>${remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })} left</span>
+                      )}
+                    </span>
+                    <span className={`font-mono font-bold ${percentCollected >= 100 ? 'text-emerald-400' : 'text-gold-500'}`}>
+                      {percentCollected >= 100 ? '100%' : `${percentRemaining.toFixed(1)}% remaining`}
+                    </span>
                   </div>
                 </div>
               )}
