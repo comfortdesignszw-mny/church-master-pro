@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Member } from "@/db";
-import { Download, Plus, FileSpreadsheet, Edit2, Trash2, Share2, CircleAlert, CheckCircle2, Search, Upload } from "lucide-react";
+import { Download, Plus, FileSpreadsheet, Edit2, Trash2, Share2, CircleAlert, CheckCircle2, Search, Upload, Contact } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useSearchParams } from "react-router-dom";
@@ -172,6 +172,31 @@ export function Members() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     };
     reader.readAsText(file);
+  };
+
+  const handleImportContacts = async () => {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      showToast('Contact Picker API is not supported in this browser.');
+      return;
+    }
+    
+    try {
+      const properties = ['name', 'tel'];
+      const options = { multiple: false };
+      const contacts = await (navigator as any).contacts.select(properties, options);
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0];
+        setForm(prev => ({
+          ...prev,
+          fullName: contact.name && contact.name.length > 0 ? contact.name[0] : prev.fullName,
+          phone: contact.tel && contact.tel.length > 0 ? contact.tel[0] : prev.phone
+        }));
+        showToast('Contact selected! Please complete the form.');
+      }
+    } catch (ex) {
+      console.error(ex);
+      showToast('Failed to access contacts.');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -515,9 +540,21 @@ export function Members() {
 
       {showAddForm && (
         <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl animate-in fade-in duration-200">
-          <h3 className="text-base md:text-lg font-bold text-white mb-4 md:mb-6">
-            {editingMember ? `📝 Edit Member: ${editingMember.fullName}` : "👤 New Member Registration"}
-          </h3>
+          <div className="flex justify-between items-center mb-4 md:mb-6">
+            <h3 className="text-base md:text-lg font-bold text-white">
+              {editingMember ? `📝 Edit Member: ${editingMember.fullName}` : "👤 New Member Registration"}
+            </h3>
+            {!editingMember && (
+              <button
+                type="button"
+                onClick={handleImportContacts}
+                className="inline-flex items-center gap-1.5 md:gap-2 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 text-blue-400 px-3 py-1.5 rounded-md font-medium text-xs md:text-sm transition"
+              >
+                <Contact className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="truncate">Import from Contacts</span>
+              </button>
+            )}
+          </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
              <div>
                 <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Full Name *</label>
