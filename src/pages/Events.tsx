@@ -34,29 +34,6 @@ export function Events() {
     "Other"
   ];
 
-  const [contributionEventId, setContributionEventId] = useState<number | null>(null);
-  const [contributionForm, setContributionForm] = useState({ memberName: "", amount: 0 });
-
-  const handleAddContribution = async (e: React.FormEvent, event: ChurchEvent) => {
-    e.preventDefault();
-    if (!contributionForm.amount || contributionForm.amount <= 0) return;
-    try {
-      await db.transactions.add({
-        type: 'income',
-        category: `${event.name} Contribution`,
-        amount: Number(contributionForm.amount),
-        date: new Date().toISOString().split('T')[0],
-        eventId: event.id,
-        notes: `Contribution from ${contributionForm.memberName || 'Anonymous'}`
-      });
-      setContributionForm({ memberName: "", amount: 0 });
-      setContributionEventId(null);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to save contribution');
-    }
-  };
-
   const toggleReminder = async (event: ChurchEvent & { reminderSet?: boolean }) => {
     if (!event.id) return;
     try {
@@ -209,15 +186,7 @@ export function Events() {
             ? `${formattedDate} — ${formattedEndDate}`
             : formattedDate;
 
-          // Compute contributions real time
           const target = event.expectedContribution || 0;
-          const collected = transactions
-            .filter(t => t.type === 'income' && t.category === `${event.name} Contribution`)
-            .reduce((sum, t) => sum + t.amount, 0);
-
-          const remaining = Math.max(0, target - collected);
-          const percentCollected = target > 0 ? (collected / target) * 100 : 0;
-          const percentRemaining = target > 0 ? (remaining / target) * 100 : 0;
 
           return (
             <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 shadow-sm flex flex-col h-full hover:border-midnight-700 transition">
@@ -255,105 +224,16 @@ export function Events() {
                 )}
               </div>
 
-              {target > 0 ? (
-                <div className="mt-auto pt-4 border-t border-midnight-800 space-y-3">
+              {target > 0 && (
+                <div className="mt-auto pt-4 border-t border-midnight-800">
                   <div className="flex justify-between items-end">
                     <div>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Target</p>
                       <p className="text-lg font-black text-white">${target.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Earned Contributions</p>
-                      <p className="text-sm font-bold text-emerald-400">+${collected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    </div>
                   </div>
-
-                  {/* Meter Progress */}
-                  <div className="relative w-full h-2 bg-midnight-950 rounded-full overflow-hidden">
-                    <div 
-                      className={`absolute left-0 top-0 h-full rounded-full transition-all duration-500 ${
-                        percentCollected >= 100 ? 'bg-gradient-to-r from-emerald-500 to-green-400 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-emerald-400'
-                      }`}
-                      style={{ width: `${Math.min(100, percentCollected)}%` }}
-                    />
-                  </div>
-
-                  {/* Breakdown details */}
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium font-mono">
-                      {percentCollected >= 100 ? (
-                        <span className="text-emerald-400 font-bold">🎉 Target Fully Met!</span>
-                      ) : (
-                        <span>${remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })} left</span>
-                      )}
-                    </span>
-                    <span className={`font-mono font-bold ${percentCollected >= 100 ? 'text-emerald-400' : 'text-gold-500'}`}>
-                      {percentCollected >= 100 ? '100.0% met' : `${percentRemaining.toFixed(1)}% remaining`}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-auto pt-4 border-t border-midnight-800 flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-medium">No target set</span>
-                  <p className="text-slate-400 font-medium">Collected: <span className="text-emerald-400 font-bold">${collected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
                 </div>
               )}
-
-              {/* Event Contributions List */}
-              <div className="mt-4 pt-4 border-t border-midnight-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Contributions</h4>
-                  <button 
-                    onClick={() => setContributionEventId(contributionEventId === event.id ? null : (event.id || null))}
-                    className="text-[10px] bg-midnight-800 hover:bg-midnight-700 text-slate-300 px-2.5 py-1 rounded border border-midnight-700 transition"
-                  >
-                    {contributionEventId === event.id ? 'Cancel' : '+ Add'}
-                  </button>
-                </div>
-
-                {contributionEventId === event.id && (
-                  <form onSubmit={(e) => handleAddContribution(e, event)} className="mb-4 bg-midnight-950 p-3 rounded-lg border border-midnight-800 space-y-3 animate-in fade-in slide-in-from-top-2">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Member Name (Optional)</label>
-                      <input 
-                        type="text" 
-                        value={contributionForm.memberName} 
-                        onChange={e => setContributionForm({...contributionForm, memberName: e.target.value})} 
-                        className="w-full bg-midnight-900 border border-midnight-700 rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs" 
-                        placeholder="Anonymous if empty" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Amount *</label>
-                      <input 
-                        type="number" 
-                        required
-                        min="0.01" step="0.01" 
-                        value={contributionForm.amount || ""} 
-                        onChange={e => setContributionForm({...contributionForm, amount: Number(e.target.value)})} 
-                        className="w-full bg-midnight-900 border border-midnight-700 rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs" 
-                        placeholder="0.00" 
-                      />
-                    </div>
-                    <button type="submit" className="w-full bg-gold-500 hover:bg-gold-600 text-midnight-950 text-[10px] font-bold py-1.5 rounded transition">
-                      Save Contribution
-                    </button>
-                  </form>
-                )}
-
-                <div className="space-y-2 max-h-[120px] overflow-y-auto pr-1">
-                  {transactions.filter(t => t.type === 'income' && t.category === `${event.name} Contribution`).map(t => (
-                    <div key={t.id} className="flex justify-between items-center text-xs bg-midnight-950/50 p-2 rounded">
-                      <span className="text-slate-400 truncate pr-2">{t.notes.replace('Contribution from ', '')}</span>
-                      <span className="text-emerald-400 font-bold whitespace-nowrap">${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  ))}
-                  {transactions.filter(t => t.type === 'income' && t.category === `${event.name} Contribution`).length === 0 && (
-                    <div className="text-center text-[10px] text-slate-500 italic py-2">No contributions yet</div>
-                  )}
-                </div>
-              </div>
-
             </div>
           )
         })}

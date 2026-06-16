@@ -667,6 +667,40 @@ export function Members() {
                   );
                 })}
               </tbody>
+              <tfoot className="bg-midnight-950/80 border-t-2 border-midnight-800">
+                <tr>
+                  <td className="px-6 py-4 font-black uppercase text-gold-500 tracking-wider sticky left-0 bg-midnight-950 border-r border-midnight-800/40 z-10 text-xs">
+                    Total per Event
+                  </td>
+                  {analysisColumns.map(col => {
+                    const colTotal = members.reduce((sum, member) => {
+                      const match = transactions.filter(t => 
+                        t.type === 'income' && 
+                        t.memberId === member.id && 
+                        (
+                          (col.eventId != null && t.eventId === col.eventId) || 
+                          (col.eventId == null && t.category === col.name) ||
+                          (col.eventId != null && t.category === `${col.name} Contribution`)
+                        )
+                      );
+                      return sum + match.reduce((s, t) => s + t.amount, 0);
+                    }, 0);
+
+                    return (
+                      <td key={col.key} className="px-6 py-4 text-center">
+                        {colTotal > 0 ? (
+                          <span className="font-bold text-emerald-400 whitespace-nowrap">
+                            ${colTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          </span>
+                        ) : (
+                          <span className="font-bold text-slate-500 text-xs">$0.00</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-6 py-4 text-center text-slate-500 sticky right-0 bg-midnight-950 border-l border-midnight-800/40 z-10">—</td>
+                </tr>
+              </tfoot>
             </table>
           )}
         </div>
