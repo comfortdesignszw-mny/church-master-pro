@@ -119,7 +119,7 @@ export function Members() {
         await db.members.add(form);
         showToast(`Successfully registered ${form.fullName}.`);
       }
-      setForm({ fullName: "", position: "", gender: "Male", group: "Adult", phone: "", email: "", address: "" });
+      setForm({ fullName: "", position: "", gender: "Male", group: "Adult", phone: "", email: "", address: "", dob: "" });
       setShowAddForm(false);
     } catch (error) {
       console.error(error);
@@ -128,7 +128,7 @@ export function Members() {
   };
 
   const cancelForm = () => {
-    setForm({ fullName: "", position: "", gender: "Male", group: "Adult", phone: "", email: "", address: "" });
+    setForm({ fullName: "", position: "", gender: "Male", group: "Adult", phone: "", email: "", address: "", dob: "" });
     setEditingMember(null);
     setShowAddForm(false);
   };
@@ -469,6 +469,10 @@ export function Members() {
              <div>
                 <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Email Address</label>
                 <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" placeholder="member@domain.com" />
+             </div>
+             <div>
+                <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Date of Birth</label>
+                <input type="date" value={form.dob || ""} onChange={e => setForm({...form, dob: e.target.value})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
              </div>
              <div className="md:col-span-2">
                 <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5 md:mb-2">Home Address</label>

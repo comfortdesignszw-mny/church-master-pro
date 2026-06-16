@@ -3,12 +3,73 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
-import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu } from "lucide-react";
+import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu, Moon, Sun } from "lucide-react";
 
 export function AppLayout() {
   const settingsPersonal = useLiveQuery(() => db.settings_personal.toCollection().last());
   const settingsChurch = useLiveQuery(() => db.settings_church.toCollection().last());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('cm_theme') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('cm_theme', theme);
+  }, [theme]);
+
+  // Check for upcoming event reminders every minute while the app is open
+  useEffect(() => {
+    const checkReminders = async () => {
+      // Must have permission
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      
+      const now = new Date();
+      // Find events that are coming up in the next 24 hours that have reminderSet
+      const allEvents = await db.events.toArray();
+      const upcomingEvents = allEvents.filter(e => {
+         if (!e.reminderSet || !e.date) return false;
+         const eventDate = new Date(`${e.date}T${e.time || '00:00'}`);
+         const diffMs = eventDate.getTime() - now.getTime();
+         const diffHours = diffMs / (1000 * 60 * 60);
+         // Remind if exactly between 23.5 and 24.5 hours from now, or 0.5 to 1.5 hours from now
+         // We use local storage to ensure we don't spam multiple times for the same event phase
+         
+         const is24h = diffHours > 23 && diffHours <= 24;
+         const is1h = diffHours > 0 && diffHours <= 1;
+         
+         if (is24h) {
+           const key = `reminded_24h_${e.id}`;
+           if (!localStorage.getItem(key)) {
+             localStorage.setItem(key, 'true');
+             return true;
+           }
+         }
+         
+         if (is1h) {
+           const key = `reminded_1h_${e.id}`;
+           if (!localStorage.getItem(key)) {
+             localStorage.setItem(key, 'true');
+             return true;
+           }
+         }
+         return false;
+      });
+
+      upcomingEvents.forEach(e => {
+        new Notification('Upcoming Event Reminder', {
+          body: `${e.name} is starting ${e.time ? 'at ' + e.time : 'soon'}!`,
+          icon: '/src/assets/images/church_master_icon_1781535615677.jpg'
+        });
+      });
+    };
+
+    const interval = setInterval(checkReminders, 1000 * 60); // Check every minute
+    // Initial check
+    setTimeout(checkReminders, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // PWA Native App Install Banner Handlers
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -288,6 +349,15 @@ export function AppLayout() {
                 <span className="hidden sm:inline">Install Native App</span>
               </button>
             )}
+
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+              className="p-1.5 md:p-2 bg-midnight-950 text-slate-450 hover:text-gold-400 hover:bg-midnight-900 rounded border border-midnight-800 flex items-center justify-center transition"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 md:w-5 md:h-5 text-gold-500" /> : <Moon className="w-4 h-4 md:w-5 md:h-5 text-slate-500" />}
+            </button>
 
             {/* Force lock manually button built in header */}
             {getSecurityPin() && (

@@ -19,9 +19,48 @@ export function Dashboard() {
 
   const activeEventsCount = events.length; 
 
+  const [activeEventSlide, setActiveEventSlide] = React.useState(0);
+
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const treasuryBalance = totalIncome - totalExpense;
+
+  // Birthdays Logic
+  const upcomingBirthdays = React.useMemo(() => {
+    const now = new Date();
+    const currentWeekEnd = new Date(now);
+    currentWeekEnd.setDate(now.getDate() + 7);
+    
+    return members.filter(m => {
+      if (!m.dob) return false;
+      const dobArr = m.dob.split('-');
+      if (dobArr.length !== 3) return false;
+      const thisYearDob = new Date(now.getFullYear(), parseInt(dobArr[1]) - 1, parseInt(dobArr[2]));
+      
+      // If birthday has passed this year, check next year
+      if (thisYearDob < new Date(now.getTime() - 24*60*60*1000)) {
+        thisYearDob.setFullYear(now.getFullYear() + 1);
+      }
+      return thisYearDob >= new Date(now.getTime() - 24*60*60*1000) && thisYearDob <= currentWeekEnd;
+    });
+  }, [members]);
+
+  // Upcoming events
+  const upcomingEventsList = React.useMemo(() => {
+    return events.filter(e => {
+      if (!e.date) return false;
+      const evtDate = new Date(e.date);
+      return evtDate >= new Date(Date.now() - 24 * 60 * 60 * 1000); // Today or future
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [events]);
+
+  React.useEffect(() => {
+    if(upcomingEventsList.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveEventSlide(prev => (prev + 1) % upcomingEventsList.length);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [upcomingEventsList.length]);
 
   // Chart Data preparation
   const incomeCategoriesData = transactions
@@ -71,6 +110,50 @@ export function Dashboard() {
              <p className="text-[8px] md:text-[10px] text-slate-500 mt-2 md:mt-4 font-bold truncate">Recorded Expenses</p>
           </div>
         </div>
+
+        {/* Upcoming Events Carousel */}
+        {upcomingEventsList.length > 0 && (
+          <div className="col-span-1 md:col-span-12 relative overflow-hidden bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl shadow-[0_0_20px_rgba(251,191,36,0.3)] animate-in fade-in zoom-in-95 duration-500">
+            <div 
+              className="flex transition-transform duration-700 ease-in-out" 
+              style={{ transform: `translateX(-${activeEventSlide * 100}%)` }}
+            >
+              {upcomingEventsList.map(e => (
+                <div key={e.id} className="min-w-full flex-shrink-0 p-4 md:p-6 flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-[10px] md:text-sm font-black text-gold-950 uppercase tracking-widest mb-1 flex items-center gap-2">
+                       <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-midnight-950" />
+                       Upcoming Event Alert
+                    </p>
+                    <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-midnight-950 truncate leading-tight drop-shadow-sm">{e.name}</h3>
+                    <p className="text-midnight-950/80 text-[10px] md:text-xs font-bold mt-1 max-w-sm xl:max-w-xl truncate">
+                       {e.date} {e.time ? `• ${e.time}` : ''} {e.venue ? `• 📍 ${e.venue}` : ''}
+                    </p>
+                  </div>
+                  <div className="hidden md:flex ml-4 bg-midnight-950 px-4 py-2 rounded-xl border border-gold-400">
+                     <div className="text-center">
+                       <p className="text-[10px] font-black uppercase text-gold-400 tracking-wider">Target</p>
+                       <p className="text-lg font-black text-white">${e.expectedContribution?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</p>
+                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Carousel Pagination dots */}
+            {upcomingEventsList.length > 1 && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                {upcomingEventsList.map((_, i) => (
+                  <button 
+                    key={i} 
+                    onClick={() => setActiveEventSlide(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${i === activeEventSlide ? 'bg-midnight-950 scale-125' : 'bg-midnight-950/30'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Main Section */}
         <div className="col-span-1 md:col-span-12 lg:col-span-8 bg-midnight-900 border border-midnight-800 rounded-xl flex flex-col shadow-2xl">
@@ -143,6 +226,32 @@ export function Dashboard() {
                  </p>
                  <p className="text-[9px] md:text-[10px] text-slate-400 leading-relaxed">Demographics breakdown across <span className="text-white font-bold italic">{totalMembers}</span> total members.</p>
                </div>
+             </div>
+          </div>
+
+          {/* Upcoming Birthdays widget */}
+          <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl relative overflow-hidden">
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                 🎉 Upcoming Birthdays
+                 {upcomingBirthdays.length > 0 && (
+                   <span className="bg-rose-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full animate-pulse">{upcomingBirthdays.length}</span>
+                 )}
+               </h3>
+             </div>
+             <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+               {upcomingBirthdays.length > 0 ? (
+                 upcomingBirthdays.map(m => (
+                   <div key={m.id} className="p-3 bg-midnight-950/50 hover:bg-midnight-950 rounded-lg border border-midnight-800 transition flex justify-between items-center">
+                     <div>
+                       <p className="text-xs font-bold text-white">{m.fullName}</p>
+                       <p className="text-[10px] text-slate-500">{m.group} • {m.dob}</p>
+                     </div>
+                   </div>
+                 ))
+               ) : (
+                 <div className="text-center py-4 text-[10px] text-slate-500 font-medium border border-dashed border-midnight-800 rounded-lg">No birthdays this week</div>
+               )}
              </div>
           </div>
 

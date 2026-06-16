@@ -312,23 +312,33 @@ export function Accounting() {
       </div>
 
       {showAddForm && (
-        <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-4 shadow-xl">
-          <div className="flex border-b border-midnight-800">
-            <button
-              onClick={() => handleTabChange('income')}
-              className={`flex-1 py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'income' ? 'bg-midnight-800 text-emerald-400 border-b-2 border-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+        <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-midnight-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-midnight-900 border border-midnight-700 rounded-xl overflow-hidden shadow-2xl relative w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <button 
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="absolute top-3 md:top-4 right-3 md:right-4 w-8 h-8 flex items-center justify-center bg-midnight-800 hover:bg-rose-500 hover:text-white text-slate-400 rounded-full transition-colors z-10"
             >
-              Record Income
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
-            <button
-              onClick={() => handleTabChange('expense')}
-              className={`flex-1 py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'expense' ? 'bg-midnight-800 text-rose-400 border-b-2 border-rose-400' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              Record Expense
-            </button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="flex border-b border-midnight-800">
+              <button
+                onClick={() => handleTabChange('income')}
+                className={`flex-1 py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'income' ? 'bg-midnight-800 text-emerald-400 border-b-2 border-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                Record Income
+              </button>
+              <button
+                onClick={() => handleTabChange('expense')}
+                className={`flex-1 py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'expense' ? 'bg-midnight-800 text-rose-400 border-b-2 border-rose-400' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                Record Expense
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
              {activeTab === 'income' && (
                <div className="col-span-1 md:col-span-2 p-3 md:p-4 bg-midnight-950/40 rounded-lg border border-midnight-800 space-y-3 md:space-y-4">
                  <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">1. Contributor (Member)</h4>
@@ -407,7 +417,8 @@ export function Accounting() {
              </div>
           </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Transaction History */}
       <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden shadow-xl">

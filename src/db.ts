@@ -9,6 +9,7 @@ export interface Member {
   phone: string;
   email: string;
   address?: string;
+  dob?: string;
 }
 
 export interface ChurchEvent {

@@ -437,6 +437,19 @@ export function BibleStudy() {
     triggerAlert(`Highlighted ${book} ${chapter}:${verse}`, "success");
   };
 
+  const handleResetBibles = async () => {
+    if (confirm("Are you sure you want to clear all downloaded Bibles? This will remove all offline resources and free up local storage.")) {
+      try {
+        await db.bible_versions.clear();
+        triggerAlert("Offline Bibles have been successfully cleared.", "success");
+        setSelectedVersionId("SEED");
+      } catch (err) {
+        console.error(err);
+        triggerAlert("Failed to clear offline databases.", "error");
+      }
+    }
+  };
+
   const handleToggleBookmark = async () => {
     if (!activeVerseMenu) return;
     const { book, chapter, verse } = activeVerseMenu;
@@ -629,7 +642,12 @@ export function BibleStudy() {
 
             {/* Offline Loader: Setup Manager Downloads */}
             <div className="border-t border-midnight-800 pt-4 space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Add Open-Source Versions</p>
+              <div className="flex justify-between items-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Add Open-Source Versions</p>
+                <button onClick={handleResetBibles} className="text-[10px] font-bold text-rose-500 hover:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-0.5 rounded transition">
+                  Reset Bibles
+                </button>
+              </div>
               
               {downloadProgress !== -1 && (
                 <div className="space-y-1.5 p-3.5 bg-midnight-950 border border-midnight-800 rounded-lg">

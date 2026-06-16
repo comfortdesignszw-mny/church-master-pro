@@ -22,4 +22,27 @@
   body {
     @apply bg-midnight-950 text-slate-300 font-sans antialiased;
   }
+  
+  :root[data-theme='light'] {
+    --color-midnight-950: #f8fafc;
+    --color-midnight-900: #ffffff;
+    --color-midnight-800: #e2e8f0;
+    --color-midnight-700: #cbd5e1;
+    --color-midnight-600: #94a3b8;
+    
+    --color-slate-100: #0f172a;
+    --color-slate-200: #1e293b;
+    --color-slate-300: #334155;
+    --color-slate-400: #475569;
+    --color-slate-500: #64748b;
+    --color-slate-800: #cbd5e1;
+    --color-slate-900: #e2e8f0;
+    
+    --color-white: #0f172a;
+    
+    /* Slightly darken the gold in light mode for contrast against white backgrounds */
+    --color-gold-400: #d97706;
+    --color-gold-500: #b45309;
+    --color-gold-600: #92400e;
+  }
 }
