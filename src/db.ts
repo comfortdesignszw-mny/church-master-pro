@@ -21,6 +21,7 @@ export interface ChurchEvent {
   time: string;
   expectedContribution: number;
   reminderSet?: boolean;
+  rsvps?: Record<number, 'Attending' | 'Maybe' | 'Declined'>;
 }
 
 export interface Transaction {

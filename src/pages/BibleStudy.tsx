@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type BibleVersion, type BibleInteraction, type StudyNote } from "@/db";
+import { jsPDF } from "jspdf";
+import { useSearchParams } from "react-router-dom";
 import { 
   BookOpen, Download, Highlighter, Bookmark, Copy, Plus, Trash2, 
   FileText, CheckCircle2, AlertCircle, Link, ChevronRight, Share2, Sparkles, BookMarked, ToggleLeft, ToggleRight
@@ -18,6 +20,23 @@ export function BibleStudy() {
   const [selectedBook, setSelectedBook] = useState<string>("Genesis");
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [activeNoteId, setActiveNoteId] = useState<number | null>(null);
+
+  const [searchParams] = useSearchParams();
+
+  // Deep-linking helper to automatically load book/chapter if specified in the query parameters
+  useEffect(() => {
+    const bookParam = searchParams.get("book");
+    const chapterParam = searchParams.get("chapter");
+    if (bookParam) {
+      setSelectedBook(bookParam);
+    }
+    if (chapterParam) {
+      const chNum = Number(chapterParam);
+      if (!isNaN(chNum) && chNum > 0) {
+        setSelectedChapter(chNum);
+      }
+    }
+  }, [searchParams]);
 
   // Split-screen configuration
   const [showNotepad, setShowNotepad] = useState<boolean>(true);

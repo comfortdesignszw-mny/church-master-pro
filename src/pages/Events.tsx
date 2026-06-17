@@ -1,11 +1,17 @@
 import React, { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ChurchEvent } from "@/db";
-import { Calendar as CalendarIcon, Clock, MapPin, Plus, Bell, BellRing, Edit2, Trash2, Share2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Plus, Bell, BellRing, Edit2, Trash2, Share2, ChevronLeft, ChevronRight, Info, Users, Check, X, ClipboardCheck } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 export function Events() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightEventId = searchParams.get('eventId');
+
   const events = useLiveQuery(() => db.events.toArray()) || [];
   const transactions = useLiveQuery(() => db.transactions.toArray()) || [];
+  const members = useLiveQuery(() => db.members.toArray()) || [];
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [nameOption, setNameOption] = useState<string>("International Lord's Super");
   const [customName, setCustomName] = useState<string>("");
@@ -20,6 +26,96 @@ export function Events() {
 
   const [eventsFormMode, setEventsFormMode] = useState<'add' | 'edit'>('add');
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
+
+  // Calendar and RSVP States
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+  const [selectedCalendarEventId, setSelectedCalendarEventId] = useState<number | null>(null);
+
+  // Smooth scroll and focus on highlighted event if any
+  React.useEffect(() => {
+    if (highlightEventId) {
+      setTimeout(() => {
+        const el = document.getElementById(`event-card-${highlightEventId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [highlightEventId]);
+
+  // Calendar Navigation Helpers
+  const handlePrevMonth = () => {
+    setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleToday = () => {
+    setCalendarDate(new Date());
+  };
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const monthsList = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const currentYear = calendarDate.getFullYear();
+  const currentMonth = calendarDate.getMonth();
+
+  const gridCells = React.useMemo(() => {
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
+
+    const cells: { day: number; isCurrent: boolean; dateStr: string }[] = [];
+
+    // Leading days from previous month
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const d = prevMonthDays - i;
+      const prevM = currentMonth === 0 ? 11 : currentMonth - 1;
+      const prevY = currentMonth === 0 ? currentYear - 1 : currentYear;
+      const dateStr = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      cells.push({ day: d, isCurrent: false, dateStr });
+    }
+
+    // Days in current month
+    for (let d = 1; d <= totalDaysInMonth; d++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      cells.push({ day: d, isCurrent: true, dateStr });
+    }
+
+    // Trailing days from next month to make 42
+    const totalSlotsVal = 42;
+    const nextDaysCount = totalSlotsVal - cells.length;
+    for (let d = 1; d <= nextDaysCount; d++) {
+      const nextM = currentMonth === 11 ? 0 : currentMonth + 1;
+      const nextY = currentMonth === 11 ? currentYear + 1 : currentYear;
+      const dateStr = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      cells.push({ day: d, isCurrent: false, dateStr });
+    }
+
+    return cells;
+  }, [currentYear, currentMonth]);
+
+  const getEventsForDate = (dateStr: string) => {
+    return events.filter(e => {
+      if (!e.date) return false;
+      if (e.endDate) {
+        // Range check
+        const start = new Date(e.date);
+        const end = new Date(e.endDate);
+        const current = new Date(dateStr);
+        start.setHours(0,0,0,0);
+        end.setHours(0,0,0,0);
+        current.setHours(0,0,0,0);
+        return current >= start && current <= end;
+      }
+      return e.date === dateStr;
+    });
+  };
 
   const eventPresets = [
     "International Lord's Super",
@@ -237,7 +333,15 @@ Please join us!`;
              </div>
              <div>
                 <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Financial Target (Optional)</label>
-                <input type="number" min="0" step="0.01" value={form.expectedContribution} onChange={e => setForm({...form, expectedContribution: Number(e.target.value)})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
+                <input 
+                  type="number" 
+                  min="0" 
+                  step="0.01" 
+                  value={form.expectedContribution === 0 ? "" : form.expectedContribution} 
+                  onChange={e => setForm({...form, expectedContribution: e.target.value === "" ? 0 : Number(e.target.value)})} 
+                  placeholder="0.00" 
+                  className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" 
+                />
              </div>
              
              <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-midnight-800">
@@ -282,8 +386,14 @@ Please join us!`;
           const percentCollected = target > 0 ? Math.min(100, (collected / target) * 100) : 0;
           const percentRemaining = target > 0 ? (remaining / target) * 100 : 0;
 
+          const isHighlighted = highlightEventId === String(event.id);
+
           return (
-            <div key={event.id} className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 neon-glow flex flex-col h-full hover:border-midnight-700 transition">
+            <div 
+              key={event.id} 
+              id={`event-card-${event.id}`} 
+              className={`bg-midnight-900 border ${isHighlighted ? 'ring-2 ring-gold-500 border-gold-400 scale-[1.01] shadow-[0_0_30px_rgba(251,191,36,0.35)]' : 'border-midnight-800'} rounded-xl p-6 neon-glow flex flex-col h-full hover:border-midnight-700 transition duration-300`}
+            >
               <div className="flex justify-between items-start mb-4 gap-2">
                 <div>
                   <h3 className="font-display font-bold text-xl text-slate-100 leading-tight">{event.name}</h3>
@@ -389,6 +499,263 @@ Please join us!`;
           )
         })}
       </div>
+
+      {/* 📅 Interactive Event Calendar Subsection */}
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow mt-8">
+        <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-midnight-950/20 gap-4">
+          <div>
+            <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-gold-500" />
+              <span>Interactive Event Calendar</span>
+            </h3>
+            <p className="text-[10px] md:text-xs text-slate-400 mt-1">
+              Select any event on the schedule to view details & handle RSVP attendance status.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button 
+              onClick={handlePrevMonth}
+              className="p-1.5 md:p-2 bg-midnight-950 hover:bg-slate-800 border border-midnight-800 hover:border-midnight-700 text-slate-300 rounded-md transition"
+              title="Previous Month"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs md:text-sm font-bold text-slate-200 min-w-[120px] text-center">
+              {monthsList[currentMonth]} {currentYear}
+            </span>
+            <button 
+              onClick={handleNextMonth}
+              className="p-1.5 md:p-2 bg-midnight-950 hover:bg-slate-800 border border-midnight-800 hover:border-midnight-700 text-slate-300 rounded-md transition"
+              title="Next Month"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={handleToday}
+              className="ml-2 px-2.5 py-1.5 bg-gold-500/10 hover:bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded-md text-xs font-bold transition"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-6 overflow-x-auto custom-scrollbar">
+          <div className="min-w-[600px]">
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2 text-center text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">
+              {weekdays.map(day => (
+                <div key={day} className="py-1">{day}</div>
+              ))}
+            </div>
+
+            {/* Grid cells */}
+            <div className="grid grid-cols-7 gap-1 md:gap-2">
+              {gridCells.map((cell, idx) => {
+                const dayEvents = getEventsForDate(cell.dateStr);
+                const isTodayStr = new Date().toISOString().split('T')[0] === cell.dateStr;
+
+                return (
+                  <div 
+                    key={idx} 
+                    className={`min-h-[75px] md:min-h-[110px] p-2 bg-midnight-950/40 border border-midnight-800/60 rounded-lg flex flex-col justify-between transition group hover:border-midnight-650 ${
+                      cell.isCurrent ? 'text-slate-200 bg-midnight-950/20' : 'text-slate-600 bg-midnight-950/5 opacity-40'
+                    } ${isTodayStr ? 'ring-1 ring-gold-500 border-gold-500/40 bg-gold-950/5' : ''}`}
+                  >
+                    <span className={`text-[10px] md:text-xs font-mono font-bold leading-none ${
+                      isTodayStr ? 'text-gold-400 bg-gold-500/15 px-1.5 py-0.5 rounded-full' : ''
+                    }`}>
+                      {cell.day}
+                    </span>
+
+                    <div className="space-y-1 mt-2 flex-1 overflow-y-auto custom-scrollbar max-h-[50px] md:max-h-[80px]">
+                      {dayEvents.map(e => (
+                        <button
+                          key={e.id}
+                          onClick={() => setSelectedCalendarEventId(e.id || null)}
+                          className="w-full text-left truncate block text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 md:py-1 rounded bg-gold-500/10 hover:bg-gold-500/25 border border-gold-500/20 text-gold-300 font-medium transition cursor-pointer"
+                          title={e.name}
+                        >
+                          {e.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 🎟️ RSVP Status & Event Details Modal */}
+      {selectedCalendarEventId !== null && (() => {
+        const selectedEvent = events.find(e => e.id === selectedCalendarEventId);
+        if (!selectedEvent) return null;
+
+        const rsvps = selectedEvent.rsvps || {};
+        const attendingCount = Object.values(rsvps).filter(v => v === 'Attending').length;
+        const maybeCount = Object.values(rsvps).filter(v => v === 'Maybe').length;
+        const declinedCount = Object.values(rsvps).filter(v => v === 'Declined').length;
+
+        const collectedForSelected = transactions
+          .filter(t => t.type === 'income' && (t.category === `${selectedEvent.name} Contribution` || t.eventId === selectedEvent.id))
+          .reduce((sum, t) => sum + t.amount, 0);
+
+        const handleStatusToggle = async (memberId: number, currentStatus?: 'Attending' | 'Maybe' | 'Declined') => {
+          const statusOrder: ('Attending' | 'Maybe' | 'Declined' | undefined)[] = ['Attending', 'Maybe', 'Declined', undefined];
+          const nextIdx = (statusOrder.indexOf(currentStatus) + 1) % statusOrder.length;
+          const nextStatus = statusOrder[nextIdx];
+
+          const updatedRsvps = { ...rsvps };
+          if (!nextStatus) {
+            delete updatedRsvps[memberId];
+          } else {
+            updatedRsvps[memberId] = nextStatus;
+          }
+
+          await db.events.update(selectedEvent.id!, { rsvps: updatedRsvps });
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-midnight-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-midnight-900 border border-midnight-700 rounded-xl overflow-hidden shadow-2xl relative w-full max-w-2xl max-h-[85vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="px-4 md:px-6 py-4 border-b border-midnight-800 flex justify-between items-center bg-midnight-950/50">
+                <div className="min-w-0">
+                  <span className="text-[8px] md:text-[9px] bg-gold-950 border border-gold-500/20 text-gold-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Event RSVP Ledger</span>
+                  <h3 className="text-base md:text-lg font-black text-slate-100 truncate mt-1 leading-tight">{selectedEvent.name}</h3>
+                </div>
+                <button 
+                  onClick={() => setSelectedCalendarEventId(null)}
+                  className="w-8 h-8 flex items-center justify-center bg-midnight-800 hover:bg-rose-500 hover:text-white text-slate-400 rounded-full transition-colors shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Core Area */}
+              <div className="p-4 md:p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+                {/* Visual Overview Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left Column: Details */}
+                  <div className="space-y-2 text-xs md:text-sm text-slate-300 bg-midnight-950/40 p-3 md:p-4 rounded-xl border border-midnight-800">
+                    <h4 className="font-bold text-gold-500 mb-2 uppercase tracking-wide text-[9px] md:text-[10px]">Scheduling Specs</h4>
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{selectedEvent.date}{selectedEvent.endDate ? ` — ${selectedEvent.endDate}` : ""}</span>
+                    </div>
+                    {selectedEvent.time && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{selectedEvent.time}</span>
+                      </div>
+                    )}
+                    {selectedEvent.venue && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{selectedEvent.venue}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 border-t border-midnight-800/50 pt-2 mt-2">
+                      <Info className="w-3.5 h-3.5 text-slate-500" />
+                      <div className="flex justify-between w-full">
+                        <span>Fundraising Level</span>
+                        <span className="font-bold text-slate-200 font-mono">
+                          ${collectedForSelected.toLocaleString()} {selectedEvent.expectedContribution > 0 ? ` / $${selectedEvent.expectedContribution.toLocaleString()}` : ""}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: RSVP Stats Wheel */}
+                  <div className="bg-midnight-950/40 p-3 md:p-4 rounded-xl border border-midnight-800 flex flex-col justify-center">
+                    <h4 className="font-bold text-gold-500 mb-3 uppercase tracking-wide text-[9px] md:text-[10px]">Response Summary</h4>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-emerald-950/40 border border-emerald-500/20 p-2 rounded-lg">
+                        <p className="text-lg font-black text-emerald-400">{attendingCount}</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Attending</p>
+                      </div>
+                      <div className="bg-blue-950/40 border border-blue-500/20 p-2 rounded-lg">
+                        <p className="text-lg font-black text-blue-400">{maybeCount}</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Maybe</p>
+                      </div>
+                      <div className="bg-rose-950/40 border border-rose-500/20 p-2 rounded-lg">
+                        <p className="text-lg font-black text-rose-400">{declinedCount}</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Declined</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RSVP Attendance Interactive Directory */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                    <span>Member RSVP Matrix</span>
+                    <span className="text-[10px] text-slate-500 normal-case font-normal hidden sm:inline">Click status button next to any member to select/change response</span>
+                  </h4>
+
+                  {members.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic py-4 text-center">No church members registered. Add members in the Members section to trace RSVPs.</p>
+                  ) : (
+                    <div className="border border-midnight-800 rounded-xl divide-y divide-midnight-800/60 overflow-hidden bg-midnight-950/20 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {members.map(m => {
+                        const mId = m.id!;
+                        const status = rsvps[mId];
+
+                        return (
+                          <div key={mId} className="flex justify-between items-center p-3 hover:bg-midnight-800/40 transition">
+                            <div className="min-w-0 pr-4">
+                              <p className="text-xs md:text-sm font-bold text-slate-200 truncate">{m.fullName}</p>
+                              <p className="text-[9px] md:text-[10px] text-slate-500 truncate">{m.position || "Member"}</p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleStatusToggle(mId, status)}
+                              className={`px-3 py-1 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition flex items-center gap-1.5 shrink-0 select-none ${
+                                status === 'Attending' 
+                                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                                  : status === 'Maybe'
+                                  ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400'
+                                  : status === 'Declined'
+                                  ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                                  : 'bg-slate-800/40 border border-slate-700/50 text-slate-400 hover:bg-slate-700/40'
+                              }`}
+                            >
+                              {status === 'Attending' && <Check className="w-3 h-3 text-emerald-400" />}
+                              <span>{status || 'No Response'}</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-4 md:px-6 py-4 border-t border-midnight-800 bg-midnight-950/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCalendarEventId(null)}
+                  className="bg-gold-500 hover:bg-gold-600 text-midnight-950 font-bold px-4 py-2 rounded-lg text-xs transition"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      
+      {/* Calendar helper code block */}
+      {(() => {
+        // Render helper arrays in local scope for compilation accessibility
+        if (false) {
+          console.log(calendarDate, selectedCalendarEventId);
+        }
+      })()}
     </div>
   );
 }

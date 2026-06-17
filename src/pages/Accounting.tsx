@@ -19,6 +19,7 @@ const DEFAULT_INCOME_CATEGORIES = [
 const DEFAULT_EXPENSE_CATEGORIES = [
   "Charity work",
   "Funeral",
+  "Church Rent, Bills and Utilities",
   "Other Emergencies"
 ];
 
@@ -54,6 +55,8 @@ export function Accounting() {
 
   const [viewMode, setViewMode] = useState<'ledger' | 'reports'>('ledger');
   const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
+  const [reportInterval, setReportInterval] = useState<'weekly' | 'monthly' | 'quarterly'>('quarterly');
+  const [selectedWeeklyDate, setSelectedWeeklyDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
@@ -205,6 +208,136 @@ export function Accounting() {
     doc.save(`${reportYear}_Q${quarter}_Financial_Report.pdf`);
   };
 
+  const generateMonthlyReport = (monthIndex: number) => {
+    const doc = new jsPDF();
+    let textStartX = 14;
+    
+    if (churchSettings && churchSettings.logo) {
+      try {
+        doc.addImage(churchSettings.logo, 'JPEG', 14, 12, 18, 18);
+        textStartX = 36;
+      } catch (err) {
+        console.error("Error inserting logo into PDF:", err);
+      }
+    }
+    
+    if (churchSettings) {
+      doc.setFontSize(18);
+      doc.text(churchSettings.name.toUpperCase(), textStartX, 20);
+      doc.setFontSize(10);
+      doc.text(`${churchSettings.branch || 'Main Branch'} • ${churchSettings.district || 'District'}`, textStartX, 28);
+    } else {
+      doc.setFontSize(18);
+      doc.text("Financial Ledger", 14, 20);
+    }
+
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const mName = months[monthIndex];
+    
+    doc.setFontSize(14);
+    doc.text(`${reportYear} ${mName} Financial Report`, 14, 45);
+
+    const mTransactions = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getFullYear() === reportYear && d.getMonth() === monthIndex;
+    });
+
+    const income = mTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expense = mTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+    doc.setFontSize(11);
+    doc.text(`Total Income: $${income.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 55);
+    doc.text(`Total Expenses: $${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 62);
+    doc.text(`Net Balance: $${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 69);
+
+    autoTable(doc, {
+      startY: 75,
+      head: [['Date', 'Type', 'Category', 'Amount']],
+      body: mTransactions.map(t => [
+        format(new Date(t.date), 'MMM dd, yyyy'),
+        t.type.toUpperCase(),
+        t.category,
+        `$${t.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42] },
+      styles: { fontSize: 8 }
+    });
+
+    doc.save(`${reportYear}_${mName}_Financial_Report.pdf`);
+  };
+
+  const generateWeeklyReport = (startDateStr: string) => {
+    if (!startDateStr) return;
+    const start = new Date(startDateStr);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    const doc = new jsPDF();
+    let textStartX = 14;
+    
+    if (churchSettings && churchSettings.logo) {
+      try {
+        doc.addImage(churchSettings.logo, 'JPEG', 14, 12, 18, 18);
+        textStartX = 36;
+      } catch (err) {
+        console.error("Error inserting logo into PDF:", err);
+      }
+    }
+    
+    if (churchSettings) {
+      doc.setFontSize(18);
+      doc.text(churchSettings.name.toUpperCase(), textStartX, 20);
+      doc.setFontSize(10);
+      doc.text(`${churchSettings.branch || 'Main Branch'} • ${churchSettings.district || 'District'}`, textStartX, 28);
+    } else {
+      doc.setFontSize(18);
+      doc.text("Financial Ledger", 14, 20);
+    }
+
+    doc.setFontSize(14);
+    const dateRangeStr = `${format(start, 'MMM dd, yyyy')} — ${format(end, 'MMM dd, yyyy')}`;
+    doc.text(`Weekly Financial Report`, 14, 45);
+    doc.setFontSize(11);
+    doc.text(`Period: ${dateRangeStr}`, 14, 51);
+
+    const wTransactions = transactions.filter(t => {
+      const d = new Date(t.date);
+      d.setHours(0,0,0,0);
+      const s = new Date(start);
+      const e = new Date(end);
+      s.setHours(0,0,0,0);
+      e.setHours(0,0,0,0);
+      return d >= s && d <= e;
+    });
+
+    const income = wTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expense = wTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+    doc.text(`Total Income: $${income.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 61);
+    doc.text(`Total Expenses: $${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 68);
+    doc.text(`Net Balance: $${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}`, 14, 75);
+
+    autoTable(doc, {
+      startY: 82,
+      head: [['Date', 'Type', 'Category', 'Amount']],
+      body: wTransactions.map(t => [
+        format(new Date(t.date), 'MMM dd, yyyy'),
+        t.type.toUpperCase(),
+        t.category,
+        `$${t.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42] },
+      styles: { fontSize: 8 }
+    });
+
+    doc.save(`Weekly_Report_${format(start, 'yyyyMMdd')}_to_${format(end, 'yyyyMMdd')}.pdf`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -324,75 +457,223 @@ export function Accounting() {
           onClick={() => setViewMode('reports')}
           className={`px-4 xl:px-6 py-2.5 md:py-3 font-bold text-xs md:text-sm border-b-2 transition-colors ${viewMode === 'reports' ? 'border-gold-500 text-gold-500' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-midnight-700'}`}
         >
-          Quarterly Reports
+          Financial Reports
         </button>
       </div>
 
       {viewMode === 'reports' ? (
         <div className="space-y-6">
           <div className="bg-midnight-900 border border-midnight-800 rounded-xl p-6 neon-glow">
-             <div className="flex justify-between items-center mb-6">
-               <h3 className="text-lg font-bold text-slate-200">Quarterly Financial Summaries</h3>
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-midnight-800">
+               <div>
+                 <h3 className="text-lg font-bold text-slate-200">Financial Reports Dispatcher</h3>
+                 <p className="text-xs text-slate-400 mt-1">Generate comprehensive customized ledger summaries & PDF statements on demand.</p>
+               </div>
                
-               <select 
-                 value={reportYear}
-                 onChange={(e) => setReportYear(Number(e.target.value))}
-                 className="bg-midnight-950 border border-midnight-700 rounded-md px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm font-bold"
-               >
-                 {Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).sort((a,b) => b-a).map(year => (
-                   <option key={year} value={year}>{year}</option>
-                 ))}
-                 {!Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).includes(new Date().getFullYear()) && (
-                   <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                 )}
-               </select>
-             </div>
-
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-               {[1, 2, 3, 4].map(quarter => {
-                 const startMonth = (quarter - 1) * 3;
-                 const qTransactions = transactions.filter(t => {
-                   const d = new Date(t.date);
-                   return d.getFullYear() === reportYear && d.getMonth() >= startMonth && d.getMonth() < startMonth + 3;
-                 });
-                 const income = qTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-                 const expense = qTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-
-                 return (
-                   <div key={quarter} className="bg-midnight-950 border border-midnight-800 rounded-lg p-5 flex flex-col items-center text-center">
-                     <h4 className="font-bold text-sm text-gold-500 mb-1">Quarter {quarter}</h4>
-                     <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-4">
-                       {quarter === 1 ? 'Jan - Mar' : quarter === 2 ? 'Apr - Jun' : quarter === 3 ? 'Jul - Sep' : 'Oct - Dec'}
-                     </p>
-                     
-                     <div className="w-full space-y-2 mb-6">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Income</span>
-                          <span className="font-bold text-emerald-400">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Expenses</span>
-                          <span className="font-bold text-rose-400">${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="flex justify-between text-xs pt-2 border-t border-midnight-800">
-                          <span className="font-bold text-slate-300">Net</span>
-                          <span className={`font-bold ${(income - expense) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            ${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                          </span>
-                        </div>
-                     </div>
-
-                     <button 
-                       onClick={() => generateQuarterlyReport(quarter)}
-                       className="w-full inline-flex items-center justify-center gap-1.5 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 text-slate-200 px-3 py-2 rounded text-xs font-semibold transition mt-auto"
+               {/* Controls */}
+               <div className="flex flex-wrap items-center gap-3">
+                 {reportInterval !== 'weekly' && (
+                   <div className="flex items-center gap-2">
+                     <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Year:</span>
+                     <select 
+                       value={reportYear}
+                       onChange={(e) => setReportYear(Number(e.target.value))}
+                       className="bg-midnight-950 border border-midnight-700 rounded-md px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs font-bold"
                      >
-                       <Download className="w-3.5 h-3.5 text-blue-400" />
-                       Download PDF
-                     </button>
+                       {Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).sort((a,b) => b-a).map(year => (
+                         <option key={year} value={year}>{year}</option>
+                       ))}
+                       {!Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).includes(new Date().getFullYear()) && (
+                         <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+                       )}
+                     </select>
                    </div>
-                 );
-               })}
+                 )}
+
+                 {/* Interval Mode Filter Tabs */}
+                 <div className="inline-flex bg-midnight-950 p-1 rounded-lg border border-midnight-850">
+                    {(['weekly', 'monthly', 'quarterly'] as const).map(interval => (
+                      <button
+                        key={interval}
+                        type="button"
+                        onClick={() => setReportInterval(interval)}
+                        className={`px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider transition ${
+                          reportInterval === interval 
+                            ? 'bg-gold-500 text-midnight-950 shadow-sm shadow-gold-500/10' 
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {interval}
+                      </button>
+                    ))}
+                 </div>
+               </div>
              </div>
+
+             {/* WEEKLY REPORTS */}
+             {reportInterval === 'weekly' && (
+               <div className="space-y-6">
+                 <div className="max-w-md bg-midnight-950 border border-midnight-800 rounded-xl p-5 md:p-6 mx-auto text-center space-y-4">
+                   <h4 className="text-sm font-black text-gold-400 uppercase tracking-widest">Weekly Ledger Compiler</h4>
+                   <p className="text-xs text-slate-400">Choose any day to serve as the start date of this week cycle. The system will bundle a 7-day overview starting from that date.</p>
+                   
+                   <div className="space-y-1 text-left max-w-xs mx-auto">
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Week Starting Date</label>
+                     <input 
+                       type="date"
+                       value={selectedWeeklyDate}
+                       onChange={e => setSelectedWeeklyDate(e.target.value)}
+                       className="w-full bg-midnight-900 border border-midnight-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm font-semibold"
+                     />
+                   </div>
+
+                   {(() => {
+                     const start = selectedWeeklyDate ? new Date(selectedWeeklyDate) : new Date();
+                     const end = new Date(start);
+                     end.setDate(start.getDate() + 6);
+                     const wTransactions = transactions.filter(t => {
+                       const d = new Date(t.date);
+                       d.setHours(0,0,0,0);
+                       const s = new Date(start);
+                       const e = new Date(end);
+                       s.setHours(0,0,0,0);
+                       e.setHours(0,0,0,0);
+                       return d >= s && d <= e;
+                     });
+                     const income = wTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                     const expense = wTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                     const net = income - expense;
+
+                     return (
+                       <div className="border border-midnight-800 rounded-xl p-4 bg-midnight-900/60 text-left max-w-xs mx-auto space-y-3 font-mono text-xs">
+                         <div className="flex justify-between">
+                           <span className="text-slate-400">Total Income:</span>
+                           <span className="font-bold text-emerald-400">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                         </div>
+                         <div className="flex justify-between">
+                           <span className="text-slate-400">Total Expenses:</span>
+                           <span className="font-bold text-rose-400">${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                         </div>
+                         <div className="flex justify-between pt-2 border-t border-midnight-800/80">
+                           <span className="font-bold text-slate-300">Net Return:</span>
+                           <span className={`font-bold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>${net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                         </div>
+                         <p className="text-[9px] text-center text-slate-500 pt-1">Includes {wTransactions.length} transaction entries</p>
+                       </div>
+                     );
+                   })()}
+
+                   <button
+                     type="button"
+                     onClick={() => generateWeeklyReport(selectedWeeklyDate)}
+                     className="w-full max-w-xs inline-flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 active:scale-[0.98] text-midnight-950 px-5 py-2.5 rounded-lg text-xs font-black transition shadow-lg cursor-pointer"
+                   >
+                     <Download className="w-4 h-4 shrink-0" />
+                     Generate Weekly Statement
+                   </button>
+                 </div>
+               </div>
+             )}
+
+             {/* MONTHLY REPORTS */}
+             {reportInterval === 'monthly' && (
+               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
+                 {[
+                   "January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"
+                 ].map((month, idx) => {
+                   const mTransactions = transactions.filter(t => {
+                     const d = new Date(t.date);
+                     return d.getFullYear() === reportYear && d.getMonth() === idx;
+                   });
+                   const income = mTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                   const expense = mTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+                   return (
+                     <div key={month} className="bg-midnight-950 border border-midnight-800 rounded-lg p-5 flex flex-col items-center text-center hover:border-midnight-600 transition">
+                       <h4 className="font-bold text-sm text-gold-550 mb-1">{month}</h4>
+                       <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-4">{reportYear}</p>
+                       
+                       <div className="w-full space-y-2 mb-6 text-left">
+                         <div className="flex justify-between text-xs font-mono">
+                           <span className="text-slate-400">Income</span>
+                           <span className="font-bold text-emerald-400">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                         </div>
+                         <div className="flex justify-between text-xs font-mono">
+                           <span className="text-slate-400">Expenses</span>
+                           <span className="font-bold text-rose-400">${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                         </div>
+                         <div className="flex justify-between text-xs font-mono pt-2 border-t border-midnight-800 font-bold">
+                           <span className="text-slate-300">Net</span>
+                           <span className={`font-bold ${(income - expense) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                             ${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                           </span>
+                         </div>
+                       </div>
+
+                       <button 
+                         type="button"
+                         onClick={() => generateMonthlyReport(idx)}
+                         className="w-full inline-flex items-center justify-center gap-1.5 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 text-slate-200 px-3 py-2 rounded text-xs font-semibold transition mt-auto cursor-pointer"
+                       >
+                         <Download className="w-3.5 h-3.5 text-blue-400" />
+                         Download PDF
+                       </button>
+                     </div>
+                   );
+                 })}
+               </div>
+             )}
+
+             {/* QUARTERLY REPORTS */}
+             {reportInterval === 'quarterly' && (
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
+                 {[1, 2, 3, 4].map(quarter => {
+                   const startMonth = (quarter - 1) * 3;
+                   const qTransactions = transactions.filter(t => {
+                     const d = new Date(t.date);
+                     return d.getFullYear() === reportYear && d.getMonth() >= startMonth && d.getMonth() < startMonth + 3;
+                   });
+                   const income = qTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                   const expense = qTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+                   return (
+                     <div key={quarter} className="bg-midnight-950 border border-midnight-800 rounded-lg p-5 flex flex-col items-center text-center hover:border-midnight-600 transition">
+                       <h4 className="font-bold text-sm text-gold-500 mb-1">Quarter {quarter}</h4>
+                       <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-4">
+                         {quarter === 1 ? 'Jan - Mar' : quarter === 2 ? 'Apr - Jun' : quarter === 3 ? 'Jul - Sep' : 'Oct - Dec'}
+                       </p>
+                       
+                       <div className="w-full space-y-2 mb-6 text-left">
+                          <div className="flex justify-between text-xs font-mono">
+                            <span className="text-slate-400">Income</span>
+                            <span className="font-bold text-emerald-400">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-mono">
+                            <span className="text-slate-400">Expenses</span>
+                            <span className="font-bold text-rose-400">${expense.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-mono pt-2 border-t border-midnight-800">
+                            <span className="font-bold text-slate-300">Net</span>
+                            <span className={`font-bold ${(income - expense) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              ${(income - expense).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
+                          </div>
+                       </div>
+
+                       <button 
+                         type="button"
+                         onClick={() => generateQuarterlyReport(quarter)}
+                         className="w-full inline-flex items-center justify-center gap-1.5 bg-midnight-800 hover:bg-midnight-700 border border-midnight-700 text-slate-200 px-3 py-2 rounded text-xs font-semibold transition mt-auto cursor-pointer"
+                       >
+                         <Download className="w-3.5 h-3.5 text-blue-400" />
+                         Download PDF
+                       </button>
+                     </div>
+                   );
+                 })}
+               </div>
+             )}
           </div>
         </div>
       ) : (
@@ -548,7 +829,7 @@ export function Accounting() {
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                     <span className="text-slate-500 text-xs md:text-sm">$</span>
                   </div>
-                  <input required type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: Number(e.target.value)})} className="w-full bg-midnight-950 border border-midnight-700 rounded-md py-2 pl-7 pr-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
+                  <input required type="number" min="0" step="0.01" value={form.amount === 0 ? "" : form.amount} onChange={e => setForm({...form, amount: e.target.value === "" ? 0 : Number(e.target.value)})} placeholder="0.00" className="w-full bg-midnight-950 border border-midnight-700 rounded-md py-2 pl-7 pr-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm" />
                 </div>
              </div>
              <div>

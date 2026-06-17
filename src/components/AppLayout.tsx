@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
-import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu, Moon, Sun } from "lucide-react";
+import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu, Moon, Sun, Sparkles } from "lucide-react";
 
 export function AppLayout() {
+  const navigate = useNavigate();
+  const [showBibleStudyBanner, setShowBibleStudyBanner] = useState(false);
   const settingsPersonal = useLiveQuery(() => db.settings_personal.toCollection().last());
   const settingsChurch = useLiveQuery(() => db.settings_church.toCollection().last());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -245,6 +247,50 @@ export function AppLayout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isLocked, pinInput]);
 
+  // Daily Bible study reminder check loop (HTML5 system push notifications + in-app overlay compatibility fallback)
+  useEffect(() => {
+    const checkBibleStudyReminder = () => {
+      const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const bibleReminderKey = `bible_study_reminded_${todayStr}`;
+      
+      if (!localStorage.getItem(bibleReminderKey)) {
+        // Trigger the in-app custom banner overlay
+        setShowBibleStudyBanner(true);
+        
+        // Try standard native browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            const notify = new Notification('Bible Study Reminder 📖', {
+              body: 'Have you found time to commit yourself to learning about the word of God? Take a few minutes to read the Word!!',
+              icon: '/src/assets/images/church_master_icon_1781535615677.jpg',
+              tag: 'daily-bible-reminder'
+            });
+            
+            notify.onclick = () => {
+              window.focus();
+              navigate('/bible-study');
+              setShowBibleStudyBanner(false);
+              localStorage.setItem(bibleReminderKey, 'true');
+              notify.close();
+            };
+          } catch (err) {
+            console.error("HTML5 Notification error:", err);
+          }
+        }
+      }
+    };
+
+    // Trigger shortly after app load (4 seconds)
+    const startTimer = setTimeout(checkBibleStudyReminder, 4000);
+    // Refresh check regularly every 5 minutes if app remains open
+    const checkInterval = setInterval(checkBibleStudyReminder, 1000 * 60 * 5);
+
+    return () => {
+      clearTimeout(startTimer);
+      clearInterval(checkInterval);
+    };
+  }, [navigate]);
+
   if (isLocked) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-midnight-950 to-zinc-950 flex flex-col justify-center items-center p-4">
@@ -439,6 +485,49 @@ export function AppLayout() {
           </footer>
         </main>
       </div>
+
+      {/* Daily Bible Study Push/In-App Alert Overlay */}
+      {showBibleStudyBanner && (
+        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:max-w-md bg-zinc-950/95 border border-gold-500/30 rounded-xl p-5 shadow-[0_15px_40px_rgba(0,0,0,0.7)] z-[999] animate-in slide-in-from-bottom-5 duration-300 backdrop-blur-md">
+          <div className="flex gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-gold-500/10 border border-gold-500/25 flex items-center justify-center text-gold-500 shrink-0">
+              <Sparkles className="w-5 h-5 animate-pulse text-gold-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-xs font-black uppercase text-gold-500 tracking-wider flex items-center gap-2 mb-1.5 font-mono">
+                <span>Daily Encouragement</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              </h4>
+              <p className="text-xs text-slate-100 font-medium leading-relaxed mb-4">
+                Have you found time to commit yourself to learning about the word of God? Take a few minutes to read the Word!!
+              </p>
+              <div className="flex gap-3 justify-end items-center">
+                <button
+                  onClick={() => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    localStorage.setItem(`bible_study_reminded_${todayStr}`, 'true');
+                    setShowBibleStudyBanner(false);
+                  }}
+                  className="px-3 py-1.5 text-[10px] uppercase font-black text-slate-500 hover:text-slate-300 transition cursor-pointer font-mono"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={() => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    localStorage.setItem(`bible_study_reminded_${todayStr}`, 'true');
+                    setShowBibleStudyBanner(false);
+                    navigate('/bible-study');
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-midnight-950 text-[10px] font-black uppercase tracking-wider rounded-lg transition cursor-pointer shadow-md"
+                >
+                  Read Now →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
-import { Users, Wallet, Calendar as CalendarIcon, TrendingUp, Plus, UserPlus, FileText } from "lucide-react";
+import { Users, Wallet, Calendar as CalendarIcon, TrendingUp, Plus, UserPlus, FileText, Sparkles, BookOpen } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from "react-router-dom";
 
@@ -20,6 +20,53 @@ export function Dashboard() {
   const activeEventsCount = events.length; 
 
   const [activeEventSlide, setActiveEventSlide] = React.useState(0);
+
+  // Verse of the Day Pre-sets (guaranteed Genesis 1 & John 1 starter seeds)
+  const versesList = React.useMemo(() => [
+    { book: "John", chapter: 1, verse: 1, text: "In the beginning was the Word, and the Word was with God, and the Word was God.", ref: "John 1:1" },
+    { book: "John", chapter: 1, verse: 4, text: "In him was life; and the life was the light of men.", ref: "John 1:4" },
+    { book: "John", chapter: 1, verse: 5, text: "And the light shineth in darkness; and the darkness comprehended it not.", ref: "John 1:5" },
+    { book: "John", chapter: 1, verse: 12, text: "But as many as received him, to them gave he power to become the sons of God, even to them that believe on his name.", ref: "John 1:12" },
+    { book: "Genesis", chapter: 1, verse: 1, text: "In the beginning God created the heaven and the earth.", ref: "Genesis 1:1" },
+    { book: "Genesis", chapter: 1, verse: 3, text: "And God said, Let there be light: and there was light.", ref: "Genesis 1:3" },
+    { book: "Genesis", chapter: 1, verse: 4, text: "And God saw the light, that it was good: and God divided the light from the darkness.", ref: "Genesis 1:4" },
+    { book: "Genesis", chapter: 1, verse: 12, text: "And the earth brought forth grass, and herb yielding seed after his kind, and the tree yielding fruit, whose seed was in itself...", ref: "Genesis 1:12" },
+    { book: "John", chapter: 1, verse: 9, text: "That was the true Light, which lighteth every man that cometh into the world.", ref: "John 1:9" },
+    { book: "John", chapter: 1, verse: 3, text: "All things were made by him; and without him was not any thing made that was made.", ref: "John 1:3" }
+  ], []);
+
+  const activeVerse = React.useMemo(() => {
+    const today = new Date();
+    const dayStr = today.getDate();
+    return versesList[dayStr % versesList.length];
+  }, [versesList]);
+
+  const [onlineVerse, setOnlineVerse] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    fetch("https://labs.bible.org/api/?passage=votd&type=json")
+      .then(r => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then(data => {
+        if (data && data[0]) {
+          const item = data[0];
+          setOnlineVerse({
+            book: item.bookname,
+            chapter: Number(item.chapter),
+            verse: Number(item.verse),
+            text: item.text,
+            ref: `${item.bookname} ${item.chapter}:${item.verse}`
+          });
+        }
+      })
+      .catch(() => {
+        // Fallback silently to offline-first seed list
+      });
+  }, []);
+
+  const displayVerse = onlineVerse || activeVerse;
 
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
@@ -137,8 +184,12 @@ export function Dashboard() {
               style={{ transform: `translateX(-${activeEventSlide * 100}%)` }}
             >
               {upcomingEventsList.map(e => (
-                <div key={e.id} className="min-w-full flex-shrink-0 p-4 md:p-6 flex items-center justify-between">
-                  <div className="flex-1">
+                <Link 
+                  key={e.id} 
+                  to={`/events?eventId=${e.id}`} 
+                  className="min-w-full flex-shrink-0 p-4 md:p-6 flex items-center justify-between hover:brightness-110 active:scale-[0.99] transition duration-200 cursor-pointer"
+                >
+                  <div className="flex-1 min-w-0">
                     <p className="text-[10px] md:text-sm font-black text-gold-950 uppercase tracking-widest mb-1 flex items-center gap-2">
                        <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-midnight-950" />
                        Upcoming Event Alert
@@ -154,7 +205,7 @@ export function Dashboard() {
                        <p className="text-lg font-black text-white">${e.expectedContribution?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</p>
                      </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
             
@@ -203,6 +254,31 @@ export function Dashboard() {
 
         {/* Side Section */}
         <div className="col-span-1 md:col-span-12 lg:col-span-4 flex flex-col gap-4 md:gap-6">
+          {/* Verse of the Day Card */}
+          <div className="bg-gradient-to-br from-midnight-900 to-midnight-950 border border-midnight-800 rounded-xl p-4 md:p-6 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-3 opacity-15 group-hover:opacity-30 transition duration-300">
+               <BookOpen className="w-20 h-20 text-gold-500/30 rotate-12" />
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-gold-500 animate-pulse" />
+              <h3 className="text-xs font-black uppercase tracking-widest text-gold-500">Verse of the Day</h3>
+            </div>
+            <p className="text-slate-200 text-xs md:text-sm font-medium italic leading-relaxed text-left relative z-10">
+              "{displayVerse.text}"
+            </p>
+            <div className="flex justify-between items-center mt-4 pt-3 border-t border-midnight-850 relative z-10">
+              <span className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+                {displayVerse.ref}
+              </span>
+              <Link 
+                to={`/bible-study?book=${displayVerse.book}&chapter=${displayVerse.chapter}`}
+                className="inline-flex items-center gap-1 bg-midnight-950 hover:bg-gold-500 hover:text-midnight-950 border border-midnight-800 text-slate-350 text-[10px] font-black px-2.5 py-1.5 rounded transition cursor-pointer shadow-sm"
+              >
+                Study Verse →
+              </Link>
+            </div>
+          </div>
+
           <div className="flex-1 bg-midnight-900 border border-midnight-800 rounded-xl p-4 md:p-6 neon-glow">
              <div className="flex items-center justify-between mb-4">
                <h3 className="text-sm font-bold text-white">Member Distribution</h3>

@@ -690,56 +690,56 @@ export function Members() {
       </div>
 
       {/* Member Contribution Analysis Subsection */}
-      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow">
-        <div className="px-6 py-5 border-b border-midnight-800 flex justify-between items-center bg-midnight-950/20 gap-4 flex-wrap">
+      <div className="bg-midnight-900 border border-midnight-800 rounded-xl overflow-hidden neon-glow mt-6 md:mt-8">
+        <div className="px-4 md:px-6 py-4 md:py-5 border-b border-midnight-800 flex flex-col md:flex-row justify-between items-start md:items-center bg-midnight-950/20 gap-4">
           <div>
-            <h3 className="text-lg font-bold text-white">Member Contribution Analysis</h3>
-            <p className="text-xs text-slate-400 mt-1">Matrix tracker showing individual contributions toward events and church categories.</p>
+            <h3 className="text-base md:text-lg font-bold text-white">Member Contribution Analysis</h3>
+            <p className="text-[10px] md:text-xs text-slate-400 mt-1">Matrix tracker showing individual contributions toward events and church categories.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             <button 
               disabled={members.length === 0}
               onClick={generateAnalysisPDF}
-              className="inline-flex items-center gap-1.5 bg-midnight-950 hover:bg-slate-800 border border-midnight-800 hover:border-midnight-700 text-slate-300 px-3 py-1.5 rounded text-xs font-semibold transition disabled:opacity-50"
+              className="flex-1 md:flex-none justify-center inline-flex items-center gap-1.5 bg-midnight-950 hover:bg-slate-800 border border-midnight-800 hover:border-midnight-700 text-slate-300 px-3 py-2 md:py-1.5 rounded-md text-xs font-semibold transition disabled:opacity-50 shadow-sm"
             >
-              <Download className="w-3.5 h-3.5 text-blue-400" />
-              Download Matrix PDF
+              <Download className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span className="truncate">Download PDF</span>
             </button>
             <button 
               disabled={members.length === 0}
               onClick={generateAnalysisCSV}
-              className="inline-flex items-center gap-1.5 bg-midnight-950 hover:bg-slate-800 border border-midnight-800 hover:border-midnight-700 text-slate-300 px-3 py-1.5 rounded text-xs font-semibold transition disabled:opacity-50"
+              className="flex-1 md:flex-none justify-center inline-flex items-center gap-1.5 bg-midnight-950 hover:bg-slate-800 border border-midnight-800 hover:border-midnight-700 text-slate-300 px-3 py-2 md:py-1.5 rounded-md text-xs font-semibold transition disabled:opacity-50 shadow-sm"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-              Download Matrix CSV
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="truncate">Download CSV</span>
             </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
           {analysisColumns.length === 0 ? (
-            <div className="px-6 py-10 text-center text-slate-500 text-sm font-semibold">
+            <div className="px-4 md:px-6 py-8 md:py-10 text-center text-slate-500 text-xs md:text-sm font-semibold">
               No categories/events recorded yet. Create an event or record a member transaction.
             </div>
           ) : members.length === 0 ? (
-            <div className="px-6 py-10 text-center text-slate-500 text-sm font-semibold">
+            <div className="px-4 md:px-6 py-8 md:py-10 text-center text-slate-500 text-xs md:text-sm font-semibold">
               No registered members found. Create members first to view matrix.
             </div>
           ) : (
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-midnight-950 text-slate-400 font-semibold font-mono text-[10px] uppercase tracking-wider">
+            <table className="w-full text-left text-[10px] md:text-sm whitespace-nowrap min-w-max">
+              <thead className="bg-midnight-950 text-slate-400 font-semibold font-mono text-[9px] md:text-[10px] uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4 border-b border-midnight-800 sticky left-0 bg-midnight-950 z-10">Member Name</th>
+                  <th className="px-3 py-2 md:px-6 md:py-4 border-b border-midnight-800 sticky left-0 bg-midnight-950 z-20">Member Name</th>
                   {analysisColumns.map(col => (
-                    <th key={col.key} className="px-6 py-4 border-b border-midnight-800 text-center min-w-[130px]">
-                      <span className="block text-slate-200 font-bold max-w-[150px] truncate mx-auto" title={col.name}>{col.name}</span>
+                    <th key={col.key} className="px-3 py-2 md:px-6 md:py-4 border-b border-midnight-800 text-center min-w-[100px] md:min-w-[130px]">
+                      <span className="block text-slate-200 font-bold max-w-[100px] md:max-w-[150px] truncate mx-auto" title={col.name}>{col.name}</span>
                       {col.target ? (
-                        <span className="block text-[9px] text-gold-500/80 normal-case font-bold mt-0.5">Target: ${col.target.toLocaleString()}</span>
+                        <span className="block text-[8px] md:text-[9px] text-gold-500/80 normal-case font-bold mt-0.5">Target: ${col.target.toLocaleString()}</span>
                       ) : (
-                        <span className="block text-[9px] text-slate-600 normal-case font-normal mt-0.5">Custom Fund</span>
+                        <span className="block text-[8px] md:text-[9px] text-slate-600 normal-case font-normal mt-0.5">Custom Fund</span>
                       )}
                     </th>
                   ))}
-                  <th className="px-6 py-4 border-b border-midnight-800 text-right text-gold-400 sticky right-0 bg-midnight-950 z-10">Total Contributed</th>
+                  <th className="px-3 py-2 md:px-6 md:py-4 border-b border-midnight-800 text-right text-gold-400 sticky right-0 bg-midnight-950 z-20 shadow-[-4px_0_10px_rgba(0,0,0,0.1)]">Total Given</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-midnight-800 text-slate-300">
@@ -747,9 +747,9 @@ export function Members() {
                   let totalMemberDonations = 0;
                   return (
                     <tr key={member.id} className="hover:bg-midnight-850 transition">
-                      <td className="px-6 py-4 font-bold text-slate-200 sticky left-0 bg-midnight-900 border-r border-midnight-800/40 z-10">
-                        {member.fullName}
-                        <span className="block text-[10px] text-slate-500 font-normal">{member.position || 'Member'}</span>
+                      <td className="px-3 py-2 md:px-6 md:py-4 font-bold text-slate-200 sticky left-0 bg-midnight-900 border-r border-midnight-800/40 z-10 whitespace-nowrap max-w-[120px] md:max-w-none overflow-hidden truncate shadow-[4px_0_10px_rgba(0,0,0,0.1)]">
+                        <span className="block truncate">{member.fullName}</span>
+                        <span className="block text-[8px] md:text-[10px] text-slate-500 font-normal truncate">{member.position || 'Member'}</span>
                       </td>
                       {analysisColumns.map(col => {
                         // Gather contributions made by this member under event ID or matched name/category
@@ -766,18 +766,18 @@ export function Members() {
                         totalMemberDonations += totalContributionForEvent;
 
                         return (
-                          <td key={col.key} className="px-6 py-4 text-center">
+                          <td key={col.key} className="px-3 py-2 md:px-6 md:py-4 text-center">
                             {totalContributionForEvent > 0 ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-950/70 text-emerald-400 border border-emerald-500/20 shadow-sm animate-pulse">
+                              <span className="inline-flex items-center px-1.5 md:px-2.5 py-0.5 rounded-full text-[9px] md:text-xs font-bold bg-emerald-950/70 text-emerald-400 border border-emerald-500/20 shadow-sm animate-pulse">
                                 ${totalContributionForEvent.toLocaleString(undefined, {minimumFractionDigits: 2})}
                               </span>
                             ) : (
-                              <span className="text-slate-600 font-mono text-xs">—</span>
+                              <span className="text-slate-600 font-mono text-[9px] md:text-xs">—</span>
                             )}
                           </td>
                         );
                       })}
-                      <td className="px-6 py-4 text-right font-black text-gold-400 sticky right-0 bg-midnight-900 border-l border-midnight-800/40 z-10">
+                      <td className="px-3 py-2 md:px-6 md:py-4 text-right font-black text-gold-400 sticky right-0 bg-midnight-900 border-l border-midnight-800/40 z-10 shadow-[-4px_0_10px_rgba(0,0,0,0.1)]">
                         ${totalMemberDonations.toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </td>
                     </tr>
@@ -786,7 +786,7 @@ export function Members() {
               </tbody>
               <tfoot className="bg-midnight-950/80 border-t-2 border-midnight-800">
                 <tr>
-                  <td className="px-6 py-4 font-black uppercase text-gold-500 tracking-wider sticky left-0 bg-midnight-950 border-r border-midnight-800/40 z-10 text-xs">
+                  <td className="px-3 py-2 md:px-6 md:py-4 font-black uppercase text-gold-500 tracking-wider sticky left-0 bg-midnight-950 border-r border-midnight-800/40 z-10 text-[9px] md:text-xs shadow-[4px_0_10px_rgba(0,0,0,0.1)]">
                     Total per Event
                   </td>
                   {analysisColumns.map(col => {
@@ -804,18 +804,18 @@ export function Members() {
                     }, 0);
 
                     return (
-                      <td key={col.key} className="px-6 py-4 text-center">
+                      <td key={col.key} className="px-3 py-2 md:px-6 md:py-4 text-center">
                         {colTotal > 0 ? (
-                          <span className="font-bold text-emerald-400 whitespace-nowrap">
+                          <span className="font-bold text-emerald-400 whitespace-nowrap text-[10px] md:text-sm">
                             ${colTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}
                           </span>
                         ) : (
-                          <span className="font-bold text-slate-500 text-xs">$0.00</span>
+                          <span className="font-bold text-slate-500 text-[9px] md:text-xs">$0.00</span>
                         )}
                       </td>
                     );
                   })}
-                  <td className="px-6 py-4 text-center text-slate-500 sticky right-0 bg-midnight-950 border-l border-midnight-800/40 z-10">—</td>
+                  <td className="px-3 py-2 md:px-6 md:py-4 text-center text-slate-500 sticky right-0 bg-midnight-950 border-l border-midnight-800/40 z-10 shadow-[-4px_0_10px_rgba(0,0,0,0.1)]">—</td>
                 </tr>
               </tfoot>
             </table>
