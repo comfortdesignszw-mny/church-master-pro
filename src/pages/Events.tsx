@@ -21,7 +21,8 @@ export function Events() {
     date: "",
     endDate: "",
     time: "",
-    expectedContribution: 0
+    expectedContribution: 0,
+    category: "Service"
   });
 
   const [eventsFormMode, setEventsFormMode] = useState<'add' | 'edit'>('add');
@@ -30,6 +31,24 @@ export function Events() {
   // Calendar and RSVP States
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const [selectedCalendarEventId, setSelectedCalendarEventId] = useState<number | null>(null);
+
+  // Day Cell click listener to open addition form pre-selected with clicked date
+  const handleCellClick = (dateStr: string) => {
+    setForm({
+      name: "International Lord's Super",
+      venue: "",
+      date: dateStr,
+      endDate: "",
+      time: "",
+      expectedContribution: 0,
+      category: "Service"
+    });
+    setNameOption("International Lord's Super");
+    setCustomName("");
+    setEventsFormMode('add');
+    setShowAddForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Smooth scroll and focus on highlighted event if any
   React.useEffect(() => {
@@ -181,7 +200,7 @@ export function Events() {
           expectedContribution: Number(form.expectedContribution)
         });
       }
-      setForm({ name: "International Lord's Super", venue: "", date: "", endDate: "", time: "", expectedContribution: 0 });
+      setForm({ name: "International Lord's Super", venue: "", date: "", endDate: "", time: "", expectedContribution: 0, category: "Service" });
       setNameOption("International Lord's Super");
       setCustomName("");
       setShowAddForm(false);
@@ -207,7 +226,8 @@ export function Events() {
       date: event.date || "",
       endDate: event.endDate || "",
       time: event.time || "",
-      expectedContribution: event.expectedContribution || 0
+      expectedContribution: event.expectedContribution || 0,
+      category: event.category || "Service"
     });
     setEditingEventId(event.id || null);
     setEventsFormMode('edit');
@@ -271,7 +291,7 @@ Please join us!`;
           <button 
             onClick={() => {
               setEventsFormMode('add');
-              setForm({ name: "International Lord's Super", venue: "", date: "", endDate: "", time: "", expectedContribution: 0 });
+              setForm({ name: "International Lord's Super", venue: "", date: "", endDate: "", time: "", expectedContribution: 0, category: "Service" });
               setNameOption("International Lord's Super");
               setShowAddForm(!showAddForm);
             }}
@@ -288,18 +308,34 @@ Please join us!`;
           <h3 className="text-base md:text-lg font-bold text-slate-200 mb-4 md:mb-6">{eventsFormMode === 'edit' ? 'Edit Event Details' : 'New Event Details'}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
              <div className="md:col-span-2 space-y-3 md:space-y-4">
-                <div>
-                   <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Event Name *</label>
-                   <select 
-                     required 
-                     value={nameOption} 
-                     onChange={e => setNameOption(e.target.value)} 
-                     className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm"
-                   >
-                     {eventPresets.map(preset => (
-                       <option key={preset} value={preset}>{preset}</option>
-                     ))}
-                   </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                     <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Event Name *</label>
+                     <select 
+                       required 
+                       value={nameOption} 
+                       onChange={e => setNameOption(e.target.value)} 
+                       className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm"
+                     >
+                       {eventPresets.map(preset => (
+                         <option key={preset} value={preset}>{preset}</option>
+                       ))}
+                     </select>
+                  </div>
+                  <div>
+                     <label className="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2 uppercase tracking-wide">Category *</label>
+                     <select 
+                       required 
+                       value={form.category || "Service"} 
+                       onChange={e => setForm({...form, category: e.target.value as any})} 
+                       className="w-full bg-midnight-950 border border-midnight-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-gold-500 text-xs md:text-sm font-semibold"
+                     >
+                       <option value="Service">Service</option>
+                       <option value="Study Group">Study Group</option>
+                       <option value="Community Outreach">Community Outreach</option>
+                       <option value="Other">Other</option>
+                     </select>
+                  </div>
                 </div>
                 {nameOption === "Other" && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-155">
@@ -558,27 +594,49 @@ Please join us!`;
                 return (
                   <div 
                     key={idx} 
-                    className={`min-h-[75px] md:min-h-[110px] p-2 bg-midnight-950/40 border border-midnight-800/60 rounded-lg flex flex-col justify-between transition group hover:border-midnight-650 ${
+                    onClick={() => handleCellClick(cell.dateStr)}
+                    className={`min-h-[75px] md:min-h-[110px] p-2 bg-midnight-950/40 border border-midnight-800/60 rounded-lg flex flex-col justify-between transition group hover:border-gold-500/30 hover:bg-midnight-900/40 cursor-pointer ${
                       cell.isCurrent ? 'text-slate-200 bg-midnight-950/20' : 'text-slate-600 bg-midnight-950/5 opacity-40'
                     } ${isTodayStr ? 'ring-1 ring-gold-500 border-gold-500/40 bg-gold-950/5' : ''}`}
+                    title="Click empty space to schedule a new event on this day"
                   >
-                    <span className={`text-[10px] md:text-xs font-mono font-bold leading-none ${
-                      isTodayStr ? 'text-gold-400 bg-gold-500/15 px-1.5 py-0.5 rounded-full' : ''
-                    }`}>
-                      {cell.day}
-                    </span>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-[10px] md:text-xs font-mono font-bold leading-none ${
+                        isTodayStr ? 'text-gold-400 bg-gold-500/15 px-1.5 py-0.5 rounded-full' : ''
+                      }`}>
+                        {cell.day}
+                      </span>
+                      <span className="text-[8px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity font-mono font-bold">
+                        + Add
+                      </span>
+                    </div>
 
                     <div className="space-y-1 mt-2 flex-1 overflow-y-auto custom-scrollbar max-h-[50px] md:max-h-[80px]">
-                      {dayEvents.map(e => (
-                        <button
-                          key={e.id}
-                          onClick={() => setSelectedCalendarEventId(e.id || null)}
-                          className="w-full text-left truncate block text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 md:py-1 rounded bg-gold-500/10 hover:bg-gold-500/25 border border-gold-500/20 text-gold-300 font-medium transition cursor-pointer"
-                          title={e.name}
-                        >
-                          {e.name}
-                        </button>
-                      ))}
+                      {dayEvents.map(e => {
+                        const cat = e.category || "Service";
+                        let btnStyle = "bg-emerald-500/10 hover:bg-emerald-500/25 border-emerald-500/20 text-emerald-300";
+                        if (cat === "Study Group") {
+                          btnStyle = "bg-gold-500/10 hover:bg-gold-500/25 border-gold-500/20 text-gold-300";
+                        } else if (cat === "Community Outreach") {
+                          btnStyle = "bg-purple-500/10 hover:bg-purple-500/25 border-purple-500/20 text-purple-300";
+                        } else if (cat === "Other") {
+                          btnStyle = "bg-blue-500/10 hover:bg-blue-500/25 border-blue-500/20 text-blue-300";
+                        }
+
+                        return (
+                          <button
+                            key={e.id}
+                            onClick={(ev) => {
+                              ev.stopPropagation(); // Stop parent div click (scheduling event)
+                              setSelectedCalendarEventId(e.id || null);
+                            }}
+                            className={`w-full text-left truncate block text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 md:py-1 rounded border font-medium transition cursor-pointer ${btnStyle}`}
+                            title={`${e.name} (${cat})`}
+                          >
+                            • {e.name}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );

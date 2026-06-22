@@ -22,6 +22,7 @@ export interface ChurchEvent {
   expectedContribution: number;
   reminderSet?: boolean;
   rsvps?: Record<number, 'Attending' | 'Maybe' | 'Declined'>;
+  category?: 'Service' | 'Study Group' | 'Community Outreach' | 'Other';
 }
 
 export interface Transaction {
@@ -86,6 +87,24 @@ export interface StudyNote {
   updatedAt: string; // ISO string
 }
 
+export interface StudyTopic {
+  id?: number;
+  title: string;
+  description: string;
+  category: string; // e.g. "Faith", "Grace", "Prayer", etc.
+  verses: string[]; // e.g. ["John 1:1", "John 1:12"]
+  createdAt: string;
+}
+
+export interface ReadingGroupProgress {
+  id?: number;
+  groupName: string; // e.g. "Youth Fellowship", "Women's Devotional"
+  topicId: number; // refers to StudyTopic.id
+  completedVerses: string[]; // list of completed verse refs e.g. ["John 1:1"]
+  progressPercent: number; // calculated progress %
+  lastUpdated: string;
+}
+
 export class ChurchMasterDatabase extends Dexie {
   members!: Table<Member, number>;
   events!: Table<ChurchEvent, number>;
@@ -95,6 +114,8 @@ export class ChurchMasterDatabase extends Dexie {
   bible_versions!: Table<BibleVersion, string>;
   bible_interactions!: Table<BibleInteraction, number>;
   study_notes!: Table<StudyNote, number>;
+  study_topics!: Table<StudyTopic, number>;
+  reading_progress!: Table<ReadingGroupProgress, number>;
 
   constructor() {
     super('ChurchMasterProDB');
@@ -115,6 +136,19 @@ export class ChurchMasterDatabase extends Dexie {
       bible_versions: 'id, versionAbbreviation, versionName, language',
       bible_interactions: '++id, version, book, chapter, verse, type',
       study_notes: '++id, title, updatedAt'
+    });
+
+    this.version(3).stores({
+      members: '++id, fullName, position, gender, group, phone, email',
+      events: '++id, name, venue, date, time, expectedContribution',
+      transactions: '++id, type, category, amount, eventId, memberId, date, notes',
+      settings_church: '++id, name, branch, district, province, phone, address, email, venue', 
+      settings_personal: '++id, name, phone, email, position',
+      bible_versions: 'id, versionAbbreviation, versionName, language',
+      bible_interactions: '++id, version, book, chapter, verse, type',
+      study_notes: '++id, title, updatedAt',
+      study_topics: '++id, title, category, createdAt',
+      reading_progress: '++id, groupName, topicId, lastUpdated'
     });
   }
 }

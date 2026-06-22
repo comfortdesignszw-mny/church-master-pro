@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
-import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu, Moon, Sun, Sparkles } from "lucide-react";
+import { Lock, Delete, ArrowRight, ShieldCheck, HelpCircle, Download, Menu, Moon, Sun, Sparkles, Search, Users, Calendar, Coins, X } from "lucide-react";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -15,10 +15,63 @@ export function AppLayout() {
     return (localStorage.getItem('cm_theme') as 'dark' | 'light') || 'dark';
   });
 
+  // Global search states & db metrics queries
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  const membersList = useLiveQuery(() => db.members.toArray()) || [];
+  const eventsList = useLiveQuery(() => db.events.toArray()) || [];
+  const transactionsList = useLiveQuery(() => db.transactions.toArray()) || [];
+
+  // Reset and collapse search dropdown on click-away mousedown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cm_theme', theme);
   }, [theme]);
+
+  // Compute live search results across three database stores
+  const searchResults = (() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return { members: [], events: [], transactions: [] };
+
+    const matchedMembers = membersList.filter(m => 
+      m.fullName.toLowerCase().includes(q) || 
+      (m.email && m.email.toLowerCase().includes(q)) ||
+      (m.phone && m.phone.includes(q)) ||
+      (m.position && m.position.toLowerCase().includes(q))
+    ).slice(0, 5);
+
+    const matchedEvents = eventsList.filter(e => 
+      e.name.toLowerCase().includes(q) || 
+      (e.venue && e.venue.toLowerCase().includes(q)) ||
+      (e.category && e.category.toLowerCase().includes(q))
+    ).slice(0, 5);
+
+    const matchedTransactions = transactionsList.filter(t => 
+      (t.category && t.category.toLowerCase().includes(q)) || 
+      (t.notes && t.notes.toLowerCase().includes(q)) || 
+      String(t.amount).includes(q)
+    ).slice(0, 5);
+
+    return {
+      members: matchedMembers,
+      events: matchedEvents,
+      transactions: matchedTransactions,
+    };
+  })();
+
+  const totalResultsCount = searchResults.members.length + searchResults.events.length + searchResults.transactions.length;
 
   // Check for upcoming event reminders and birthdays every minute while the app is open
   useEffect(() => {
@@ -415,6 +468,147 @@ export function AppLayout() {
               </p>
             </div>
           </div>
+
+          {/* Global Search Bar (Requirement 3) */}
+          <div className="relative flex-1 max-w-sm md:max-w-md mx-4 hidden lg:block" ref={searchDropdownRef}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={e => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
+                placeholder="Search members, events, or budgets..."
+                className="w-full bg-midnight-950/60 border border-midnight-800 rounded-lg pl-9 pr-8 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-gold-500/55 transition-all font-medium"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => {
+                    setSearchQuery("");
+                    setShowSearchResults(false);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-midnight-850 rounded-full"
+                >
+                  <X className="w-3 h-3 text-slate-450 hover:text-white" />
+                </button>
+              )}
+            </div>
+
+            {/* Live Search Popup Overlay */}
+            {showSearchResults && searchQuery.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-midnight-900 border border-midnight-800 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-[199] overflow-hidden backdrop-blur-md max-h-[380px] overflow-y-auto custom-scrollbar">
+                
+                {totalResultsCount === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-500">
+                    No records found for "{searchQuery}"
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-3">
+                    
+                    {/* Members Segment */}
+                    {searchResults.members.length > 0 && (
+                      <div className="space-y-1 text-left">
+                        <span className="px-2.5 py-1 text-[10px] font-black uppercase text-gold-500/85 tracking-widest font-mono flex items-center gap-1.5">
+                          <Users className="w-3 h-3 text-gold-500" />
+                          <span>Members Matched ({searchResults.members.length})</span>
+                        </span>
+                        <div className="space-y-0.5">
+                          {searchResults.members.map(m => (
+                            <button
+                              key={m.id}
+                              onClick={() => {
+                                setShowSearchResults(false);
+                                setSearchQuery("");
+                                navigate(`/members`);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 hover:bg-midnight-950 rounded-lg transition-colors flex justify-between items-center"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-200 truncate">{m.fullName}</p>
+                                <p className="text-[10px] text-slate-500 truncate font-mono">{m.email || m.phone || "No contact info"}</p>
+                              </div>
+                              <span className="text-[9px] bg-gold-500/10 border border-gold-500/20 text-gold-400 px-1.5 py-0.5 rounded font-mono shrink-0">
+                                {m.position || "Member"}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Events Segment */}
+                    {searchResults.events.length > 0 && (
+                      <div className="border-t border-midnight-850/45 pt-2 space-y-1 text-left">
+                        <span className="px-2.5 py-1 text-[10px] font-black uppercase text-gold-500/85 tracking-widest font-mono flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-gold-500" />
+                          <span>Events Matched ({searchResults.events.length})</span>
+                        </span>
+                        <div className="space-y-0.5">
+                          {searchResults.events.map(e => (
+                            <button
+                              key={e.id}
+                              onClick={() => {
+                                setShowSearchResults(false);
+                                setSearchQuery("");
+                                navigate(`/events`);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 hover:bg-midnight-950 rounded-lg transition-colors flex justify-between items-center"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-200 truncate">{e.name}</p>
+                                <p className="text-[10px] text-slate-500 truncate font-mono">Location: {e.venue || "TBD"}</p>
+                              </div>
+                              <span className="text-[9px] bg-emerald-500/15 text-emerald-405 border border-emerald-500/15 px-1.5 py-0.5 rounded font-mono shrink-0 font-black">
+                                {e.date}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Accounting Ledger Segment */}
+                    {searchResults.transactions.length > 0 && (
+                      <div className="border-t border-midnight-850/45 pt-2 space-y-1 text-left">
+                        <span className="px-2.5 py-1 text-[10px] font-black uppercase text-gold-500/85 tracking-widest font-mono flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5 text-gold-500" />
+                          <span>Ledger Matched ({searchResults.transactions.length})</span>
+                        </span>
+                        <div className="space-y-0.5">
+                          {searchResults.transactions.map(t => (
+                            <button
+                              key={t.id}
+                              onClick={() => {
+                                setShowSearchResults(false);
+                                setSearchQuery("");
+                                navigate(`/accounting`);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 hover:bg-midnight-950 rounded-lg transition-colors flex justify-between items-center"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-200 truncate">{t.category}</p>
+                                <p className="text-[10px] text-slate-500 truncate font-mono italic">"{t.notes || "Statement entries"}"</p>
+                              </div>
+                              <span className={`text-[10px] font-mono font-bold shrink-0 ${
+                                t.type === 'income' ? 'text-emerald-450' : 'text-rose-450'
+                              }`}>
+                                {t.type === 'income' ? '+' : '-'}${t.amount}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center gap-2 md:gap-6">
             {/* Custom browser PWA install buttons */}
             {isInstallable && deferredPrompt && (

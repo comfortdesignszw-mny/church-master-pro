@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type BibleVersion, type BibleInteraction, type StudyNote } from "@/db";
 import { jsPDF } from "jspdf";
 import { useSearchParams } from "react-router-dom";
+import { BibleStudyGroups } from "@/components/BibleStudyGroups";
 import { 
   BookOpen, Download, Highlighter, Bookmark, Copy, Plus, Trash2, 
   FileText, CheckCircle2, AlertCircle, Link, ChevronRight, Share2, Sparkles, BookMarked, ToggleLeft, ToggleRight
@@ -20,6 +21,7 @@ export function BibleStudy() {
   const [selectedBook, setSelectedBook] = useState<string>("Genesis");
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [activeNoteId, setActiveNoteId] = useState<number | null>(null);
+  const [studyTab, setStudyTab] = useState<'personal' | 'groups'>('personal');
 
   const [searchParams] = useSearchParams();
 
@@ -606,29 +608,54 @@ export function BibleStudy() {
         <div>
           <h2 className="text-2xl font-display font-black text-slate-100 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-gold-500 animate-pulse" />
-            Personal Bible Study Suite
+            Bible Study Hub
           </h2>
-          <p className="text-sm text-slate-400">Read scriptures offline, bookmark, highlight, and write a matching study journal.</p>
+          <p className="text-sm text-slate-400">Read scriptures offline, organize study topics, and track reading achievements for your church groups.</p>
         </div>
 
-        {/* Global Toolbar */}
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowNotepad(!showNotepad)}
-            className="px-4 py-2 border border-midnight-800 bg-midnight-900 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-midnight-800 transition flex items-center gap-2 active:scale-95"
-          >
-            {showNotepad ? (
-              <>
-                <ToggleRight className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Notepad Active</span>
-              </>
-            ) : (
-              <>
-                <ToggleLeft className="w-4 h-4 text-slate-500 shrink-0" />
-                <span>Notepad Standard View</span>
-              </>
-            )}
-          </button>
+        {/* Global Toolbar Tabs */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex border border-midnight-800 p-0.5 bg-midnight-950/60 rounded-lg">
+            <button
+              onClick={() => setStudyTab('personal')}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-center transition duration-150 ${
+                studyTab === 'personal'
+                  ? 'bg-gold-500 text-midnight-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-midnight-900/40'
+              }`}
+            >
+              Scriptures study
+            </button>
+            <button
+              onClick={() => setStudyTab('groups')}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md text-center transition duration-150 ${
+                studyTab === 'groups'
+                  ? 'bg-gold-500 text-midnight-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-midnight-900/40'
+              }`}
+            >
+              Group plans
+            </button>
+          </div>
+
+          {studyTab === 'personal' && (
+            <button 
+              onClick={() => setShowNotepad(!showNotepad)}
+              className="px-4 py-1.5 border border-midnight-800 bg-midnight-900 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-midnight-850 transition flex items-center gap-2 active:scale-95"
+            >
+              {showNotepad ? (
+                <>
+                  <ToggleRight className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Notepad Active</span>
+                </>
+              ) : (
+                <>
+                  <ToggleLeft className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span>Notepad Standard View</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -651,8 +678,9 @@ export function BibleStudy() {
         </div>
       )}
 
-      {/* Main Study Arena Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6 items-stretch">
+      {studyTab === 'personal' && (
+        /* Main Study Arena Grid */
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6 items-stretch">
         
         {/* Left Hand Sidebar Column: Recent Notes, Bookmarks & Available Offline translations (3 cols) */}
         <div className="xl:col-span-3 space-y-4 md:space-y-6">
@@ -1186,6 +1214,9 @@ export function BibleStudy() {
         </div>
 
       </div>
+      )}
+
+      {studyTab === 'groups' && <BibleStudyGroups />}
 
     </div>
   );
